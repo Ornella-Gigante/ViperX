@@ -116,7 +116,7 @@ This project is based on the public domain Snake game mechanic and is released u
 
 
 <p align="left">
-<img src="https://github.com/Ornella-Gigante/MathViper/blob/main/structure.png" width="600"/>
+<img src="https://github.com/Ornella-Gigante/ViperX/blob/main/structure.png" width="600"/>
 </p>
 
 
