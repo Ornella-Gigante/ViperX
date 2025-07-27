@@ -27,13 +27,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private final int cellSize = 70;
     private final int numCells = 10;
     private float startX, startY;
+    private SoundPool soundPool;
+    private int eatSound;
+    private int wrongSound;
+
 
     private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint questionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-    private SoundPool soundPool;
-    private int eatSound, wrongSound;
 
     public GameView(Context context) {
         this(context, null);
