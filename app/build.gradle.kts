@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "es.nellagames.viperx"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "es.nellagames.viperx"
