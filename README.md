@@ -137,6 +137,15 @@ Configurations, permissions, and string resources.
 
 ---
 
+## 🎵 Music & Audio Credits
+
+All background music and sound effects have been properly audited for copyright and licensing compliance:
+
+* **Music by** [u_z8apfbwc3d](https://pixabay.com/users/u_z8apfbwc3d-43565405/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=204327) from [Pixabay](https://pixabay.com/music//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=204327)  
+* Audio assets are released under a license that allows free use in personal and commercial projects without attribution (attribution added voluntarily).
+
+---
+
 ## 📩 Contact & Support
 
 Questions or ideas? Feel free to reach out via GitHub issues or pull requests!
