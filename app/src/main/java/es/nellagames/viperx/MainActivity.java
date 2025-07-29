@@ -14,7 +14,7 @@ public class MainActivity extends AppCompatActivity {
         gameView = new GameView(this);
         setContentView(gameView);
 
-        backgroundMusic = MediaPlayer.create(this, R.raw.music);
+        backgroundMusic = MediaPlayer.create(this, R.raw.main_music);
         backgroundMusic.setLooping(true);
         backgroundMusic.start();
     }
