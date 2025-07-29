@@ -1,6 +1,5 @@
 package es.nellagames.viperx;
 
-
 import android.content.Context;
 import android.graphics.*;
 import android.media.SoundPool;
@@ -27,15 +26,19 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private final int cellSize = 70;
     private final int numCells = 10;
     private float startX, startY;
-    private SoundPool soundPool;
-    private int eatSound;
-    private int wrongSound;
 
+    // Bonus variables (adapt as needed)
+    private Point bonusFood = null;
+    private int bonusValue = 5;
+    private boolean showBonus = false;
 
     private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint questionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // SOUND EFFECTS
+    private SoundPool soundPool;
+    private int correctSound, errorSound, bonusSound, loseSound;
 
     public GameView(Context context) {
         this(context, null);
@@ -56,9 +59,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         scorePaint.setTextSize(40f);
         scorePaint.setTypeface(Typeface.DEFAULT);
 
-        soundPool = new SoundPool.Builder().setMaxStreams(2).build();
-        eatSound = soundPool.load(context, R.raw.eat, 1);
-        wrongSound = soundPool.load(context, R.raw.wrong, 1);
+        soundPool = new SoundPool.Builder().setMaxStreams(4).build();
+        correctSound = soundPool.load(context, R.raw.correct, 1);
+        errorSound = soundPool.load(context, R.raw.error, 1);
+        bonusSound = soundPool.load(context, R.raw.bonus, 1);
+        loseSound = soundPool.load(context, R.raw.lose, 1);
     }
 
     public void restartGame() {
@@ -67,7 +72,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         direction = Direction.RIGHT;
         score = 0;
         gameOver = false;
+        showBonus = false;
         spawnMathQuestion();
+        bonusFood = null;
     }
 
     private void spawnMathQuestion() {
@@ -81,6 +88,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         food = new Point(x, y);
         while (snakeContains(food)) {
             food = new Point(rand.nextInt(numCells), rand.nextInt(numCells));
+        }
+        // Aparece un bonus extra aleatorio a veces
+        showBonus = rand.nextInt(5) == 0; // 20% de las veces
+        if (showBonus) {
+            do {
+                bonusFood = new Point(rand.nextInt(numCells), rand.nextInt(numCells));
+            } while (snakeContains(bonusFood) || bonusFood.equals(food));
+        } else {
+            bonusFood = null;
         }
     }
 
@@ -101,7 +117,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         canvas.drawRect(0, 0, getWidth(), 110f, rectPaint);
 
         canvas.drawText("Q: " + questionA + " " + operation + " " + questionB + " = ?", 25f, 75f, questionPaint);
-
         canvas.drawText("Score: " + score, 20f, 160f, scorePaint);
 
         // Draw snake
@@ -116,7 +131,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     paint);
         }
 
-        // Draw food (answer)
+        // Draw normal food (correct answer)
         paint.setColor(Color.rgb(255, 87, 34));
         canvas.drawOval(
                 food.x * cellSize + 8,
@@ -133,6 +148,26 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 food.y * cellSize + 150,
                 paint
         );
+
+        // Draw bonus food
+        if (showBonus && bonusFood != null) {
+            paint.setColor(Color.YELLOW);
+            canvas.drawOval(
+                    bonusFood.x * cellSize + 8,
+                    bonusFood.y * cellSize + 128,
+                    bonusFood.x * cellSize + cellSize - 8,
+                    bonusFood.y * cellSize + cellSize + 112,
+                    paint
+            );
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(32f);
+            canvas.drawText(
+                    "+" + bonusValue,
+                    bonusFood.x * cellSize + 16,
+                    bonusFood.y * cellSize + 154,
+                    paint
+            );
+        }
 
         // Draw Game Over
         if (gameOver) {
@@ -159,16 +194,24 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case RIGHT: head.x += 1; break;
         }
 
+        // Revisar colisión con la pared o su propio cuerpo
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
-            soundPool.play(wrongSound, 1f, 1f, 1, 0, 1f);
+            soundPool.play(loseSound, 1f, 1f, 1, 0, 1f); // PIERDE
         } else {
             snake.add(0, head);
             if (head.equals(food)) {
+                soundPool.play(correctSound, 1f, 1f, 1, 0, 1f);
                 score++;
-                soundPool.play(eatSound, 1f, 1f, 1, 0, 1f);
                 spawnMathQuestion();
+            } else if (showBonus && bonusFood != null && head.equals(bonusFood)) {
+                soundPool.play(bonusSound, 1f, 1f, 1, 0, 1f);
+                score += bonusValue;
+                // El bonus desaparece hasta la siguiente pregunta
+                showBonus = false;
+                bonusFood = null;
             } else {
+                // Aquí podrías detectar si el jugador come comida equivocada si agregas "comida trampa"
                 snake.remove(snake.size() - 1);
             }
         }
