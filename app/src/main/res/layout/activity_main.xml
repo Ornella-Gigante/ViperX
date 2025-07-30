@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rootFrame"
     android:layout_width="match_parent"
@@ -23,6 +22,8 @@
 
         <TextView
             android:id="@+id/highScoreLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="High Score: 0"
             android:textSize="22sp"
             android:textColor="@android:color/black"
@@ -57,15 +58,21 @@
         android:visibility="gone">
 
         <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="How to play"
             android:textSize="28sp"
             android:textStyle="bold"
             android:textColor="#323232"
             android:layout_marginBottom="16dp"/>
+
         <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="Swipe to move the snake.\nEat the right answer and bonuses.\nAvoid crashing into yourself or walls!"
             android:textSize="20sp"
             android:textColor="#323232"/>
+
         <Button
             android:id="@+id/backFromInstructionsButton"
             android:layout_width="wrap_content"
@@ -80,4 +87,5 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone"/>
+
 </FrameLayout>

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ViperX</string>
+    <string name="swipe_to_move_the_snake_neat_the_right_answer_and_bonuses_navoid_crashing_into_yourself_or_walls">Swipe to move the snake.\nEat the right answer and bonuses.\nAvoid crashing into yourself or walls!</string>
 </resources>
