@@ -89,8 +89,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         while (snakeContains(food)) {
             food = new Point(rand.nextInt(numCells), rand.nextInt(numCells));
         }
-        // Aparece un bonus extra aleatorio a veces
-        showBonus = rand.nextInt(5) == 0; // 20% de las veces
+        // Aparece un bonus extra aleatorio a veces (20% de chance)
+        showBonus = rand.nextInt(5) == 0;
         if (showBonus) {
             do {
                 bonusFood = new Point(rand.nextInt(numCells), rand.nextInt(numCells));
@@ -111,15 +111,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         if (canvas == null) return;
         canvas.drawColor(Color.rgb(250, 250, 200));
 
-        // Question bar
+        // Question bar background
         Paint rectPaint = new Paint();
         rectPaint.setColor(Color.rgb(230, 230, 250));
         canvas.drawRect(0, 0, getWidth(), 110f, rectPaint);
 
+        // Math question and score text
         canvas.drawText("Q: " + questionA + " " + operation + " " + questionB + " = ?", 25f, 75f, questionPaint);
         canvas.drawText("Score: " + score, 20f, 160f, scorePaint);
 
-        // Draw snake
+        // Draw snake (head green, body lighter green)
         for (int i = 0; i < snake.size(); i++) {
             Point p = snake.get(i);
             paint.setColor(i == 0 ? Color.rgb(76, 175, 80) : Color.rgb(139, 195, 74));
@@ -131,25 +132,23 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     paint);
         }
 
-        // Draw normal food (correct answer)
+        // Draw normal food (correct answer) — orange oval with number
         paint.setColor(Color.rgb(255, 87, 34));
         canvas.drawOval(
                 food.x * cellSize + 8,
                 food.y * cellSize + 128,
                 food.x * cellSize + cellSize - 8,
                 food.y * cellSize + cellSize + 112,
-                paint
-        );
+                paint);
         paint.setColor(Color.WHITE);
         paint.setTextSize(40f);
         canvas.drawText(
                 String.valueOf(correctAnswer),
                 food.x * cellSize + 20,
                 food.y * cellSize + 150,
-                paint
-        );
+                paint);
 
-        // Draw bonus food
+        // Draw bonus food (yellow oval with +bonusValue)
         if (showBonus && bonusFood != null) {
             paint.setColor(Color.YELLOW);
             canvas.drawOval(
@@ -157,19 +156,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     bonusFood.y * cellSize + 128,
                     bonusFood.x * cellSize + cellSize - 8,
                     bonusFood.y * cellSize + cellSize + 112,
-                    paint
-            );
+                    paint);
             paint.setColor(Color.BLACK);
             paint.setTextSize(32f);
             canvas.drawText(
                     "+" + bonusValue,
                     bonusFood.x * cellSize + 16,
                     bonusFood.y * cellSize + 154,
-                    paint
-            );
+                    paint);
         }
 
-        // Draw Game Over
+        // Draw Game Over text centered if game over
         if (gameOver) {
             paint.setColor(Color.BLACK);
             paint.setTextSize(80f);
@@ -181,6 +178,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public void update() {
         if (gameOver) return;
 
+        // Update snake direction if pending and not opposite
         if (pendingDirection != null && !direction.isOpposite(pendingDirection)) {
             direction = pendingDirection;
             pendingDirection = null;
@@ -194,10 +192,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case RIGHT: head.x += 1; break;
         }
 
-        // Revisar colisión con la pared o su propio cuerpo
+        // Check collision with wall or self
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
-            soundPool.play(loseSound, 1f, 1f, 1, 0, 1f); // PIERDE
+            soundPool.play(loseSound, 1f, 1f, 1, 0, 1f);  // Play lose sound
         } else {
             snake.add(0, head);
             if (head.equals(food)) {
@@ -207,11 +205,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             } else if (showBonus && bonusFood != null && head.equals(bonusFood)) {
                 soundPool.play(bonusSound, 1f, 1f, 1, 0, 1f);
                 score += bonusValue;
-                // El bonus desaparece hasta la siguiente pregunta
                 showBonus = false;
                 bonusFood = null;
             } else {
-                // Aquí podrías detectar si el jugador come comida equivocada si agregas "comida trampa"
                 snake.remove(snake.size() - 1);
             }
         }
@@ -256,7 +252,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         } catch (InterruptedException e) { e.printStackTrace(); }
     }
 
-    public void pause() { thread.setRunning(false); }
+    public void pause() {
+        thread.setRunning(false);
+    }
+
     public void resume() {
         if (!thread.isRunning()) {
             thread.setRunning(true);
