@@ -4,104 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <es.nellagames.viperx.MovingShapesView
-        android:id="@+id/animatedBackground"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:visibility="visible"/>
+    <include layout="@layout/layer_background"/>
 
-    <!-- Main Menu Layer -->
-    <LinearLayout
-        android:id="@+id/menuLayer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="@drawable/background_fun_gradient"
-        android:visibility="visible">
+    <include layout="@layout/layer_menu"/>
 
-        <ImageView
-            android:src="@drawable/snake"
-            android:layout_width="260dp"
-            android:layout_height="260dp"
-            android:layout_marginBottom="4dp"
-            android:contentDescription="Snake"/>
+    <include layout="@layout/layer_instructions"/>
 
-        <TextView
-            android:id="@+id/highScoreLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="High Score: 0"
-            android:textSize="22sp"
-            android:textColor="#22223B"
-            android:layout_margin="16dp"
-            android:textStyle="bold"/>
-
-        <Button
-            android:id="@+id/playButton"
-            android:layout_width="220dp"
-            android:layout_height="wrap_content"
-            android:text="PLAY"
-            android:textSize="24sp"
-            android:backgroundTint="#B983FF"
-            android:textColor="#fff3b0"
-            android:layout_marginTop="20dp"
-            android:layout_marginBottom="6dp"/>
-
-        <Button
-            android:id="@+id/instructionsButton"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:text="Instructions"
-            android:textSize="18sp"
-            android:backgroundTint="#577590"
-            android:textColor="#fff3b0"
-            android:layout_marginTop="8dp"/>
-    </LinearLayout>
-
-    <!-- Instructions Layer -->
-    <LinearLayout
-        android:id="@+id/instructionsLayer"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="#E6fffde4"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="24dp"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="How to play"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="#472183"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Swipe to move the snake.\nEat the right answer and bonuses.\nAvoid crashing into yourself or walls!"
-            android:textSize="20sp"
-            android:textColor="#323232"/>
-
-        <Button
-            android:id="@+id/backFromInstructionsButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="BACK"
-            android:layout_marginTop="24dp"
-            android:backgroundTint="#B983FF"
-            android:textColor="#fff3b0"/>
-    </LinearLayout>
-
-    <!-- Game Layer -->
-    <es.nellagames.viperx.GameView
-        android:id="@+id/gameView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone"/>
-
+    <include layout="@layout/layer_game"/>
 </FrameLayout>
