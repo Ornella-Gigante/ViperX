@@ -21,6 +21,9 @@ public class MovingShapesView extends View {
     private final int NUM_BUBBLES = 10;
     private Random rand = new Random();
 
+    // Tamaño real de la vista (para evitar crash con nextInt(0))
+    private int width = 1, height = 1;
+
     public MovingShapesView(Context context, AttributeSet attrs) {
         super(context, attrs);
         bubbles = new Bubble[NUM_BUBBLES];
@@ -30,10 +33,17 @@ public class MovingShapesView extends View {
         handler.post(animator);
     }
 
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        width = w > 0 ? w : 1;
+        height = h > 0 ? h : 1;
+    }
+
     private Bubble createBubble() {
         Bubble b = new Bubble();
-        b.x = rand.nextInt(1000);
-        b.y = rand.nextInt(2200);
+        b.x = rand.nextInt(width > 0 ? width : 1);
+        b.y = rand.nextInt(height > 0 ? height : 1);
         b.r = rand.nextInt(25) + 25;
         b.dx = rand.nextFloat() * 3 + 1;
         b.dy = rand.nextFloat() * 2 + 1;
@@ -63,10 +73,10 @@ public class MovingShapesView extends View {
             for (Bubble b : bubbles) {
                 b.x += b.dx;
                 b.y += b.dy;
-                if (b.x > getWidth() + b.r || b.y > getHeight() + b.r) {
+                if (b.x > width + b.r || b.y > height + b.r) {
                     Bubble nb = createBubble();
                     nb.x = -nb.r;
-                    nb.y = rand.nextInt(getHeight());
+                    nb.y = rand.nextInt(height > 0 ? height : 1); // Siempre seguro
                     b.x = nb.x;
                     b.y = nb.y;
                     b.r = nb.r;
