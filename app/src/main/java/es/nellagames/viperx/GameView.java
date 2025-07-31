@@ -27,7 +27,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private final int numCells = 10;
     private float startX, startY;
 
-    // Bonus variables (adapt as needed)
+    // Bonus variables
     private Point bonusFood = null;
     private int bonusValue = 5;
     private boolean showBonus = false;
@@ -89,7 +89,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         while (snakeContains(food)) {
             food = new Point(rand.nextInt(numCells), rand.nextInt(numCells));
         }
-        // Aparece un bonus extra aleatorio a veces (20% de chance)
+        // 20% chance bonus
         showBonus = rand.nextInt(5) == 0;
         if (showBonus) {
             do {
@@ -111,16 +111,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         if (canvas == null) return;
         canvas.drawColor(Color.rgb(250, 250, 200));
 
-        // Question bar background
+        // Question bar
         Paint rectPaint = new Paint();
         rectPaint.setColor(Color.rgb(230, 230, 250));
         canvas.drawRect(0, 0, getWidth(), 110f, rectPaint);
 
-        // Math question and score text
         canvas.drawText("Q: " + questionA + " " + operation + " " + questionB + " = ?", 25f, 75f, questionPaint);
         canvas.drawText("Score: " + score, 20f, 160f, scorePaint);
 
-        // Draw snake (head green, body lighter green)
+        // Draw snake
         for (int i = 0; i < snake.size(); i++) {
             Point p = snake.get(i);
             paint.setColor(i == 0 ? Color.rgb(76, 175, 80) : Color.rgb(139, 195, 74));
@@ -132,7 +131,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     paint);
         }
 
-        // Draw normal food (correct answer) — orange oval with number
+        // Draw normal food (correct answer)
         paint.setColor(Color.rgb(255, 87, 34));
         canvas.drawOval(
                 food.x * cellSize + 8,
@@ -166,7 +165,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     paint);
         }
 
-        // Draw Game Over text centered if game over
+        // Draw Game Over text
         if (gameOver) {
             paint.setColor(Color.BLACK);
             paint.setTextSize(80f);
@@ -178,7 +177,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public void update() {
         if (gameOver) return;
 
-        // Update snake direction if pending and not opposite
         if (pendingDirection != null && !direction.isOpposite(pendingDirection)) {
             direction = pendingDirection;
             pendingDirection = null;
@@ -192,10 +190,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case RIGHT: head.x += 1; break;
         }
 
-        // Check collision with wall or self
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
-            soundPool.play(loseSound, 1f, 1f, 1, 0, 1f);  // Play lose sound
+            soundPool.play(loseSound, 1f, 1f, 1, 0, 1f);
         } else {
             snake.add(0, head);
             if (head.equals(food)) {

@@ -11,7 +11,8 @@ import androidx.appcompat.app.AppCompatActivity;
 public class MainActivity extends AppCompatActivity {
     private GameView gameView;
     private MediaPlayer backgroundMusic;
-    private LinearLayout menuLayer, instructionsLayer;
+    private LinearLayout menuLayer;
+    private View instructionsLayer;
     private TextView highScoreLabel;
     private int highScore = 0;
 
@@ -20,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Layer references from included layouts
         menuLayer = findViewById(R.id.menuLayer);
         instructionsLayer = findViewById(R.id.instructionsLayer);
         gameView = findViewById(R.id.gameView);
@@ -29,41 +31,48 @@ public class MainActivity extends AppCompatActivity {
         backgroundMusic.setLooping(true);
         backgroundMusic.start();
 
-        // PLAY
-        findViewById(R.id.playButton).setOnClickListener(v -> {
-            menuLayer.setVisibility(View.GONE);
-            instructionsLayer.setVisibility(View.GONE);
-            gameView.setVisibility(View.VISIBLE);
-            gameView.restartGame();
-        });
+        // PLAY button
+        Button playButton = findViewById(R.id.playButton);
+        if (playButton != null) {
+            playButton.setOnClickListener(v -> {
+                menuLayer.setVisibility(View.GONE);
+                instructionsLayer.setVisibility(View.GONE);
+                gameView.setVisibility(View.VISIBLE);
+                gameView.restartGame();
+            });
+        }
 
-        // INSTRUCTIONS
-        findViewById(R.id.instructionsButton).setOnClickListener(v -> {
-            menuLayer.setVisibility(View.GONE);
-            instructionsLayer.setVisibility(View.VISIBLE);
-        });
+        // INSTRUCTIONS button
+        Button instructionsButton = findViewById(R.id.instructionsButton);
+        if (instructionsButton != null) {
+            instructionsButton.setOnClickListener(v -> {
+                menuLayer.setVisibility(View.GONE);
+                instructionsLayer.setVisibility(View.VISIBLE);
+            });
+        }
 
         // BACK from instructions
-        findViewById(R.id.backFromInstructionsButton).setOnClickListener(v -> {
-            instructionsLayer.setVisibility(View.GONE);
-            menuLayer.setVisibility(View.VISIBLE);
-        });
-
-        // Opcional: Actualiza high score cuando termina el juego, etc.
+        Button backButton = findViewById(R.id.backFromInstructionsButton);
+        if (backButton != null) {
+            backButton.setOnClickListener(v -> {
+                instructionsLayer.setVisibility(View.GONE);
+                menuLayer.setVisibility(View.VISIBLE);
+            });
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         if (backgroundMusic != null) backgroundMusic.pause();
-        gameView.pause();
+        if (gameView != null) gameView.pause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         if (backgroundMusic != null) backgroundMusic.start();
-        gameView.resume();
+        if (gameView != null) gameView.resume();
     }
 
     @Override
@@ -74,6 +83,4 @@ public class MainActivity extends AppCompatActivity {
             backgroundMusic = null;
         }
     }
-
-
 }
