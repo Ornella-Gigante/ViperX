@@ -4,6 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Elementos animados de fondo -->
+    <es.nellagames.viperx.MovingShapesView
+        android:id="@+id/animatedBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:visibility="visible"/>
+
     <!-- Main Menu Layer -->
     <LinearLayout
         android:id="@+id/menuLayer"
@@ -16,8 +24,9 @@
 
         <ImageView
             android:src="@drawable/snake"
-            android:layout_width="180dp"
-            android:layout_height="180dp"
+            android:layout_width="260dp"
+            android:layout_height="260dp"
+            android:layout_marginBottom="4dp"
             android:contentDescription="Snake"/>
 
         <TextView
@@ -26,16 +35,20 @@
             android:layout_height="wrap_content"
             android:text="High Score: 0"
             android:textSize="22sp"
-            android:textColor="@android:color/black"
-            android:layout_margin="16dp"/>
+            android:textColor="#22223B"
+            android:layout_margin="16dp"
+            android:textStyle="bold"/>
 
         <Button
             android:id="@+id/playButton"
-            android:layout_width="200dp"
+            android:layout_width="220dp"
             android:layout_height="wrap_content"
             android:text="PLAY"
             android:textSize="24sp"
-            android:layout_marginTop="12dp"/>
+            android:backgroundTint="#B983FF"
+            android:textColor="#fff3b0"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="6dp"/>
 
         <Button
             android:id="@+id/instructionsButton"
@@ -43,7 +56,9 @@
             android:layout_height="wrap_content"
             android:text="Instructions"
             android:textSize="18sp"
-            android:layout_marginTop="12dp"/>
+            android:backgroundTint="#577590"
+            android:textColor="#fff3b0"
+            android:layout_marginTop="8dp"/>
     </LinearLayout>
 
     <!-- Instructions Layer -->
@@ -51,7 +66,7 @@
         android:id="@+id/instructionsLayer"
         android:orientation="vertical"
         android:gravity="center"
-        android:background="#CCFFFFFF"
+        android:background="#E6fffde4"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="24dp"
@@ -63,7 +78,7 @@
             android:text="How to play"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="#323232"
+            android:textColor="#472183"
             android:layout_marginBottom="16dp"/>
 
         <TextView
@@ -78,7 +93,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="BACK"
-            android:layout_marginTop="24dp"/>
+            android:layout_marginTop="24dp"
+            android:backgroundTint="#B983FF"
+            android:textColor="#fff3b0"/>
     </LinearLayout>
 
     <!-- Game Layer -->
