@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Elementos animados de fondo -->
     <es.nellagames.viperx.MovingShapesView
         android:id="@+id/animatedBackground"
         android:layout_width="match_parent"
