@@ -15,7 +15,7 @@
         android:visibility="visible">
 
         <ImageView
-            android:src="@drawable/head_right"
+            android:src="@drawable/snake"
             android:layout_width="180dp"
             android:layout_height="180dp"
             android:contentDescription="Snake"/>
