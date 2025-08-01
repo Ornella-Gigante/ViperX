@@ -2,6 +2,7 @@ package es.nellagames.viperx;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -20,6 +21,8 @@ public class MainActivity extends Activity {
     private Button playButton, instructionsButton, backFromInstructionsButton;
     private SharedPreferences prefs;
     private int highScore = 0;
+    private MediaPlayer backgroundMusic;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +34,11 @@ public class MainActivity extends Activity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         setContentView(R.layout.activity_main);
+
+        backgroundMusic = MediaPlayer.create(this, R.raw.main_music); // Usa el nombre que tengas: main_music.mp3
+        backgroundMusic.setLooping(true);
+        backgroundMusic.start();
+
 
         // Inicializar SharedPreferences para high score
         prefs = getSharedPreferences("ViperXPrefs", MODE_PRIVATE);
@@ -127,29 +135,27 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
-            gameView.resume();
-        }
-    }
-
-    @Override
     protected void onPause() {
         super.onPause();
+        if (backgroundMusic != null && backgroundMusic.isPlaying()) backgroundMusic.pause();
         if (gameView != null) gameView.pause();
     }
-
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (backgroundMusic != null && !backgroundMusic.isPlaying()) backgroundMusic.start();
+        if (gameView != null && gameView.getVisibility() == View.VISIBLE) gameView.resume();
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (backgroundMusic != null) {
+            backgroundMusic.release();
+            backgroundMusic = null;
+        }
         if (gameView != null) gameView.pause();
     }
 
-    // Llamar esto desde GameView cuando termine la partida:
-    public void onGameFinished(int score) {
-        runOnUiThread(() -> showGameOver(score));
-    }
 
     @Override
     public void onBackPressed() {
