@@ -5,20 +5,20 @@
     android:layout_height="match_parent"
     android:background="@drawable/background_fun_gradient">
 
-    <!-- Elementos animados de fondo: siempre visibles, debajo de los layers -->
+    <!-- Fondo animado: siempre al fondo -->
     <es.nellagames.viperx.MovingShapesView
         android:id="@+id/animatedBackground"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Layer del juego (inicialmente oculto) -->
+    <!-- Layer juego (GameView) -->
     <es.nellagames.viperx.GameView
         android:id="@+id/gameView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <!-- Layer de instrucciones (inicialmente oculto) -->
+    <!-- Layer instrucciones -->
     <FrameLayout
         android:id="@+id/instructionsLayer"
         android:layout_width="match_parent"
@@ -61,7 +61,7 @@
         </LinearLayout>
     </FrameLayout>
 
-    <!-- Layer del menú (inicialmente visible) -->
+    <!-- Layer menú -->
     <LinearLayout
         android:id="@+id/menuLayer"
         android:layout_width="match_parent"

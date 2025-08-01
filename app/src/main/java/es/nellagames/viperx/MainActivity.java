@@ -15,8 +15,9 @@ public class MainActivity extends Activity {
 
     private GameView gameView;
     private LinearLayout menuLayer;
+    private View instructionsLayer;
     private TextView highScoreLabel;
-    private Button playButton, instructionsButton;
+    private Button playButton, instructionsButton, backFromInstructionsButton;
     private SharedPreferences prefs;
     private int highScore = 0;
 
@@ -24,7 +25,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Pantalla completa
+        // Pantalla completa, opcional
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -38,81 +39,63 @@ public class MainActivity extends Activity {
         // Encontrar vistas
         gameView = findViewById(R.id.gameView);
         menuLayer = findViewById(R.id.menuLayer);
+        instructionsLayer = findViewById(R.id.instructionsLayer);
         highScoreLabel = findViewById(R.id.highScoreLabel);
         playButton = findViewById(R.id.playButton);
         instructionsButton = findViewById(R.id.instructionsButton);
+        backFromInstructionsButton = findViewById(R.id.backFromInstructionsButton);
 
-        // Actualizar high score en el menú
         updateHighScoreDisplay();
 
-        // Configurar listeners
+        // PLAY -- mostrar el juego
         playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startGame();
+                menuLayer.setVisibility(View.GONE);
+                instructionsLayer.setVisibility(View.GONE);
+                gameView.setVisibility(View.VISIBLE);
+                gameView.restartGame();
+                gameView.resume();
             }
         });
 
+        // INSTRUCTIONS -- mostrar pantalla de instrucciones animada
         instructionsButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showInstructions();
+                menuLayer.setVisibility(View.GONE);
+                gameView.setVisibility(View.GONE);
+                instructionsLayer.setVisibility(View.VISIBLE);
             }
         });
 
-        // Inicialmente mostrar menú, ocultar juego
+        // BACK en instrucciones -- volver al menú principal
+        backFromInstructionsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                instructionsLayer.setVisibility(View.GONE);
+                menuLayer.setVisibility(View.VISIBLE);
+            }
+        });
+
+        // Inicialmente mostrar menú, ocultar juego e instrucciones
         showMenu();
-
-        Log.d("MainActivity", "Activity created successfully");
-    }
-
-    private void startGame() {
-        Log.d("MainActivity", "Starting game...");
-
-        // Ocultar menú
-        menuLayer.setVisibility(View.GONE);
-
-        // Mostrar y iniciar juego
-        gameView.setVisibility(View.VISIBLE);
-        gameView.restartGame();
-        gameView.resume();
-
-        Log.d("MainActivity", "Game started");
+        Log.d("MainActivity", "Activity started");
     }
 
     private void showMenu() {
-        Log.d("MainActivity", "Showing menu...");
-
-        // Pausar juego si está corriendo
         if (gameView != null) {
             gameView.pause();
             gameView.setVisibility(View.GONE);
         }
-
-        // Mostrar menú
+        if (instructionsLayer != null) instructionsLayer.setVisibility(View.GONE);
         menuLayer.setVisibility(View.VISIBLE);
         updateHighScoreDisplay();
-
-        Log.d("MainActivity", "Menu shown");
-    }
-
-    private void showInstructions() {
-        // Aquí puedes implementar un diálogo o nueva actividad con instrucciones
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-        builder.setTitle("Instructions");
-        builder.setMessage("🐍 VIPER X - Math Snake Game\n\n" +
-                "• Swipe to move the snake\n" +
-                "• Eat the food with the correct answer\n" +
-                "• Solve math problems to grow\n" +
-                "• Avoid hitting walls or yourself\n" +
-                "• Collect bonus food for extra points!\n\n" +
-                "Good luck!");
-        builder.setPositiveButton("Got it!", null);
-        builder.show();
     }
 
     private void updateHighScoreDisplay() {
-        highScoreLabel.setText("High Score: " + highScore);
+        if (highScoreLabel != null)
+            highScoreLabel.setText("High Score: " + highScore);
     }
 
     public void updateHighScore(int newScore) {
@@ -125,15 +108,19 @@ public class MainActivity extends Activity {
     }
 
     public void showGameOver(int finalScore) {
-        Log.d("MainActivity", "Game over with score: " + finalScore);
         updateHighScore(finalScore);
 
-        // Mostrar diálogo de game over
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
         builder.setTitle("Game Over!");
         builder.setMessage("Final Score: " + finalScore +
                 (finalScore == highScore ? "\n🎉 NEW HIGH SCORE! 🎉" : ""));
-        builder.setPositiveButton("Play Again", (dialog, which) -> startGame());
+        builder.setPositiveButton("Play Again", (dialog, which) -> {
+            menuLayer.setVisibility(View.GONE);
+            instructionsLayer.setVisibility(View.GONE);
+            gameView.setVisibility(View.VISIBLE);
+            gameView.restartGame();
+            gameView.resume();
+        });
         builder.setNegativeButton("Menu", (dialog, which) -> showMenu());
         builder.setCancelable(false);
         builder.show();
@@ -142,8 +129,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d("MainActivity", "Activity resumed");
-        // No auto-resumir el juego, solo si ya estaba visible
         if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
             gameView.resume();
         }
@@ -152,22 +137,16 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d("MainActivity", "Activity paused");
-        if (gameView != null) {
-            gameView.pause();
-        }
+        if (gameView != null) gameView.pause();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d("MainActivity", "Activity destroyed");
-        if (gameView != null) {
-            gameView.pause();
-        }
+        if (gameView != null) gameView.pause();
     }
 
-    // Método para que GameView pueda llamar cuando termine el juego
+    // Llamar esto desde GameView cuando termine la partida:
     public void onGameFinished(int score) {
         runOnUiThread(() -> showGameOver(score));
     }
@@ -175,10 +154,8 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
-            // Si el juego está visible, volver al menú
             showMenu();
         } else {
-            // Si está en el menú, salir de la app
             super.onBackPressed();
         }
     }
