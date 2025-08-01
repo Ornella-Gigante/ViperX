@@ -4,10 +4,10 @@ import android.content.Context;
 import android.graphics.*;
 import android.media.SoundPool;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import androidx.core.content.ContextCompat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -45,8 +45,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap body_vertical, body_horizontal, body_topleft, body_topright, body_bottomleft, body_bottomright;
     private Bitmap tail_up, tail_down, tail_left, tail_right;
     private Bitmap apple, candy, sushi1, sushi2;
-
-    // Used for food randomization
     private Bitmap[] foodBitmaps;
 
     public GameView(Context context) {
@@ -68,36 +66,71 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         scorePaint.setTextSize(40f);
         scorePaint.setTypeface(Typeface.DEFAULT);
 
-        soundPool = new SoundPool.Builder().setMaxStreams(4).build();
-        correctSound = soundPool.load(context, R.raw.correct, 1);
-        errorSound = soundPool.load(context, R.raw.error, 1);
-        bonusSound = soundPool.load(context, R.raw.bonus, 1);
-        loseSound = soundPool.load(context, R.raw.lose, 1);
+        try {
+            soundPool = new SoundPool.Builder().setMaxStreams(4).build();
+            correctSound = soundPool.load(context, R.raw.correct, 1);
+            errorSound = soundPool.load(context, R.raw.error, 1);
+            bonusSound = soundPool.load(context, R.raw.bonus, 1);
+            loseSound = soundPool.load(context, R.raw.lose, 1);
+        } catch (Exception e) {
+            Log.e("GameView", "Error loading sounds: " + e.getMessage());
+        }
 
-        // Load all bitmap assets
-        head_up = BitmapFactory.decodeResource(getResources(), R.drawable.head_up);
-        head_down = BitmapFactory.decodeResource(getResources(), R.drawable.head_down);
-        head_left = BitmapFactory.decodeResource(getResources(), R.drawable.head_left);
-        head_right = BitmapFactory.decodeResource(getResources(), R.drawable.head_right);
+        // Load all bitmap assets con manejo de errores
+        try {
+            head_up = BitmapFactory.decodeResource(getResources(), R.drawable.head_up);
+            head_down = BitmapFactory.decodeResource(getResources(), R.drawable.head_down);
+            head_left = BitmapFactory.decodeResource(getResources(), R.drawable.head_left);
+            head_right = BitmapFactory.decodeResource(getResources(), R.drawable.head_right);
 
-        body_vertical = BitmapFactory.decodeResource(getResources(), R.drawable.body_vertical);
-        body_horizontal = BitmapFactory.decodeResource(getResources(), R.drawable.body_horizontal);
-        body_topleft = BitmapFactory.decodeResource(getResources(), R.drawable.body_topleft);
-        body_topright = BitmapFactory.decodeResource(getResources(), R.drawable.body_topright);
-        body_bottomleft = BitmapFactory.decodeResource(getResources(), R.drawable.body_bottomleft);
-        body_bottomright = BitmapFactory.decodeResource(getResources(), R.drawable.body_bottomright);
+            body_vertical = BitmapFactory.decodeResource(getResources(), R.drawable.body_vertical);
+            body_horizontal = BitmapFactory.decodeResource(getResources(), R.drawable.body_horizontal);
+            body_topleft = BitmapFactory.decodeResource(getResources(), R.drawable.body_topleft);
+            body_topright = BitmapFactory.decodeResource(getResources(), R.drawable.body_topright);
+            body_bottomleft = BitmapFactory.decodeResource(getResources(), R.drawable.body_bottomleft);
+            body_bottomright = BitmapFactory.decodeResource(getResources(), R.drawable.body_bottomright);
 
-        tail_up = BitmapFactory.decodeResource(getResources(), R.drawable.tail_up);
-        tail_down = BitmapFactory.decodeResource(getResources(), R.drawable.tail_down);
-        tail_left = BitmapFactory.decodeResource(getResources(), R.drawable.tail_left);
-        tail_right = BitmapFactory.decodeResource(getResources(), R.drawable.tail_right);
+            tail_up = BitmapFactory.decodeResource(getResources(), R.drawable.tail_up);
+            tail_down = BitmapFactory.decodeResource(getResources(), R.drawable.tail_down);
+            tail_left = BitmapFactory.decodeResource(getResources(), R.drawable.tail_left);
+            tail_right = BitmapFactory.decodeResource(getResources(), R.drawable.tail_right);
 
-        apple = BitmapFactory.decodeResource(getResources(), R.drawable.apple);
-        candy = BitmapFactory.decodeResource(getResources(), R.drawable.candy);
-        sushi1 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi1);
-        sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
+            apple = BitmapFactory.decodeResource(getResources(), R.drawable.apple);
+            candy = BitmapFactory.decodeResource(getResources(), R.drawable.candy);
+            sushi1 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi1);
+            sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
+
+            foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
+
+            Log.d("GameView", "All bitmaps loaded successfully");
+        } catch (Exception e) {
+            Log.e("GameView", "Error loading bitmaps: " + e.getMessage());
+            // Crear bitmaps de fallback si hay error
+            createFallbackBitmaps();
+        }
+    }
+
+    private void createFallbackBitmaps() {
+        // Crear bitmaps simples de colores si no se pueden cargar las imágenes
+        int size = cellSize;
+
+        head_up = head_down = head_left = head_right = createColorBitmap(size, Color.GREEN);
+        body_vertical = body_horizontal = body_topleft = body_topright =
+                body_bottomleft = body_bottomright = createColorBitmap(size, Color.BLUE);
+        tail_up = tail_down = tail_left = tail_right = createColorBitmap(size, Color.CYAN);
+        apple = candy = sushi1 = sushi2 = createColorBitmap(size, Color.RED);
 
         foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
+        Log.d("GameView", "Using fallback bitmaps");
+    }
+
+    private Bitmap createColorBitmap(int size, int color) {
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint();
+        paint.setColor(color);
+        canvas.drawRect(0, 0, size, size, paint);
+        return bitmap;
     }
 
     public void restartGame() {
@@ -105,14 +138,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         snake.add(new Point(4, 5));
         snake.add(new Point(3, 5));
         direction = Direction.RIGHT;
+        pendingDirection = null;
         score = 0;
         gameOver = false;
         showBonus = false;
         spawnMathQuestion();
         bonusFood = null;
+        Log.d("GameView", "Game restarted");
     }
 
-    // Randomizes next question and food position
     private void spawnMathQuestion() {
         Random rand = new Random();
         questionA = rand.nextInt(9) + 1;
@@ -125,7 +159,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         while (snakeContains(food)) {
             food = new Point(rand.nextInt(numCells), rand.nextInt(numCells));
         }
-        // 20% chance bonus
         showBonus = rand.nextInt(5) == 0;
         if (showBonus) {
             do {
@@ -144,10 +177,27 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
-        if (canvas == null) return;
+        if (canvas == null) {
+            Log.d("GameView", "Canvas is null!");
+            return;
+        }
 
-        // Fondo suave
-        canvas.drawColor(Color.rgb(250, 250, 200));
+        Log.d("GameView", "Drawing game - Snake size: " + snake.size() + ", Score: " + score);
+
+        // ----- FONDO CHECKERBOARD (tipo snake) -----
+        int offsetY = 120;
+        int size = cellSize;
+        int N = numCells;
+        int color1 = Color.rgb(170, 215, 81);
+        int color2 = Color.rgb(162, 209, 73);
+        Paint squarePaint = new Paint();
+
+        for (int y = 0; y < N; y++) {
+            for (int x = 0; x < N; x++) {
+                squarePaint.setColor(((x + y) % 2 == 0) ? color1 : color2);
+                canvas.drawRect(x * size, y * size + offsetY, (x + 1) * size, (y + 1) * size + offsetY, squarePaint);
+            }
+        }
 
         // Barra superior con pregunta y marcador
         Paint rectPaint = new Paint();
@@ -160,12 +210,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         // Dibuja la serpiente usando los sprites
         for (int i = 0; i < snake.size(); i++) {
             Point p = snake.get(i);
-            int x = p.x * cellSize;
-            int y = p.y * cellSize + 120;
+            int x = p.x * size;
+            int y = p.y * size + offsetY;
             Bitmap sprite = null;
 
             if (i == 0) {
-                // Cabeza
                 Direction headDir = direction;
                 if (snake.size() > 1) {
                     Point after = snake.get(1);
@@ -181,67 +230,73 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     case RIGHT: sprite = head_right; break;
                 }
             } else if (i == snake.size() - 1) {
-                // Cola
                 Point before = snake.get(i - 1);
-                if (before.x == p.x) {
-                    sprite = (before.y < p.y) ? tail_up : tail_down;
-                } else if (before.y == p.y) {
-                    sprite = (before.x < p.x) ? tail_left : tail_right;
-                }
+                if (before.x == p.x) sprite = (before.y < p.y) ? tail_up : tail_down;
+                else if (before.y == p.y) sprite = (before.x < p.x) ? tail_left : tail_right;
             } else {
-                // Cuerpo o esquina
                 Point before = snake.get(i - 1), after = snake.get(i + 1);
-                if (before.x == after.x) {
-                    sprite = body_vertical;
-                } else if (before.y == after.y) {
-                    sprite = body_horizontal;
-                } else {
-                    if ((before.x < p.x && after.y < p.y) || (after.x < p.x && before.y < p.y)) {
+                if (before.x == after.x) sprite = body_vertical;
+                else if (before.y == after.y) sprite = body_horizontal;
+                else {
+                    if ((before.x < p.x && after.y < p.y) || (after.x < p.x && before.y < p.y))
                         sprite = body_topleft;
-                    } else if ((before.x > p.x && after.y < p.y) || (after.x > p.x && before.y < p.y)) {
+                    else if ((before.x > p.x && after.y < p.y) || (after.x > p.x && before.y < p.y))
                         sprite = body_topright;
-                    } else if ((before.x < p.x && after.y > p.y) || (after.x < p.x && before.y > p.y)) {
+                    else if ((before.x < p.x && after.y > p.y) || (after.x < p.x && before.y > p.y))
                         sprite = body_bottomleft;
-                    } else if ((before.x > p.x && after.y > p.y) || (after.x > p.x && before.y > p.y)) {
+                    else if ((before.x > p.x && after.y > p.y) || (after.x > p.x && before.y > p.y))
                         sprite = body_bottomright;
-                    }
                 }
             }
-
-            if (sprite != null)
-                canvas.drawBitmap(Bitmap.createScaledBitmap(sprite, cellSize, cellSize, false), x, y, null);
+            if (sprite != null) {
+                try {
+                    canvas.drawBitmap(Bitmap.createScaledBitmap(sprite, size, size, false), x, y, null);
+                } catch (Exception e) {
+                    // Fallback: dibujar rectángulo de color
+                    Paint fallbackPaint = new Paint();
+                    fallbackPaint.setColor(i == 0 ? Color.GREEN : Color.BLUE);
+                    canvas.drawRect(x, y, x + size, y + size, fallbackPaint);
+                }
+            }
         }
 
-        // Dibuja la comida (selección aleatoria)
-        int fx = food.x * cellSize + 8;
-        int fy = food.y * cellSize + 128;
-        Bitmap foodBmp = foodBitmaps[Math.abs(correctAnswer) % foodBitmaps.length];
-        canvas.drawBitmap(Bitmap.createScaledBitmap(foodBmp, cellSize - 16, cellSize - 16, false), fx, fy, null);
+        // Dibuja la comida
+        int fx = food.x * size + 8;
+        int fy = food.y * size + offsetY + 8;
+        try {
+            Bitmap foodBmp = foodBitmaps[Math.abs(correctAnswer) % foodBitmaps.length];
+            canvas.drawBitmap(Bitmap.createScaledBitmap(foodBmp, size - 16, size - 16, false), fx, fy, null);
+        } catch (Exception e) {
+            // Fallback: dibujar círculo rojo
+            Paint foodPaint = new Paint();
+            foodPaint.setColor(Color.RED);
+            canvas.drawCircle(fx + (size - 16) / 2, fy + (size - 16) / 2, (size - 16) / 2, foodPaint);
+        }
 
-        // Número encima de la comida (respuesta correcta)
+        // Número encima de la comida
         Paint textPaint = new Paint();
         textPaint.setColor(Color.BLACK);
         textPaint.setTextSize(38f);
         textPaint.setFakeBoldText(true);
-        canvas.drawText(
-                String.valueOf(correctAnswer),
-                food.x * cellSize + cellSize / 4,
-                food.y * cellSize + 128 + cellSize / 2 + 12,
-                textPaint);
+        canvas.drawText(String.valueOf(correctAnswer), food.x * size + size / 4, food.y * size + offsetY + size / 2 + 12, textPaint);
 
-        // Dibuja el bonus (si aparece)
+        // Dibuja el bonus
         if (showBonus && bonusFood != null) {
-            int bx = bonusFood.x * cellSize + 8, by = bonusFood.y * cellSize + 128;
-            Bitmap bmp = foodBitmaps[(score + 1) % foodBitmaps.length];
-            canvas.drawBitmap(Bitmap.createScaledBitmap(bmp, cellSize - 16, cellSize - 16, false), bx, by, null);
+            int bx = bonusFood.x * size + 8, by = bonusFood.y * size + offsetY + 8;
+            try {
+                Bitmap bmp = foodBitmaps[(score + 1) % foodBitmaps.length];
+                canvas.drawBitmap(Bitmap.createScaledBitmap(bmp, size - 16, size - 16, false), bx, by, null);
+            } catch (Exception e) {
+                // Fallback: dibujar círculo amarillo
+                Paint bonusPaint = new Paint();
+                bonusPaint.setColor(Color.YELLOW);
+                canvas.drawCircle(bx + (size - 16) / 2, by + (size - 16) / 2, (size - 16) / 2, bonusPaint);
+            }
             Paint bPaint = new Paint();
             bPaint.setColor(Color.YELLOW);
             bPaint.setTextSize(30f);
             bPaint.setFakeBoldText(true);
-            canvas.drawText("+" + bonusValue,
-                    bonusFood.x * cellSize + cellSize / 6,
-                    bonusFood.y * cellSize + 128 + cellSize / 2 + 14,
-                    bPaint);
+            canvas.drawText("+" + bonusValue, bonusFood.x * size + size / 6, bonusFood.y * size + offsetY + size / 2 + 14, bPaint);
         }
 
         // Game Over
@@ -249,21 +304,18 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             Paint overPaint = new Paint();
             overPaint.setColor(Color.BLACK);
             overPaint.setTextSize(80f);
-            overPaint.setTextAlign(Paint.Align.LEFT);
             overPaint.setFakeBoldText(true);
-            canvas.drawText("GAME OVER", 50f, getHeight() / 2f, overPaint);
-            canvas.drawText("Tap to Restart", 50f, getHeight() / 2f + 100, overPaint);
+            canvas.drawText("GAME OVER", 50, getHeight() / 2, overPaint);
+            canvas.drawText("Tap to Restart", 50, getHeight() / 2 + 100, overPaint);
         }
     }
 
     public void update() {
         if (gameOver) return;
-
         if (pendingDirection != null && !direction.isOpposite(pendingDirection)) {
             direction = pendingDirection;
             pendingDirection = null;
         }
-
         Point head = new Point(snake.get(0));
         switch (direction) {
             case UP:    head.y -= 1; break;
@@ -271,18 +323,29 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case LEFT:  head.x -= 1; break;
             case RIGHT: head.x += 1; break;
         }
-
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
-            soundPool.play(loseSound, 1f, 1f, 1, 0, 1f);
+            try {
+                soundPool.play(loseSound, 1f, 1f, 1, 0, 1f);
+            } catch (Exception e) {
+                Log.e("GameView", "Error playing lose sound");
+            }
         } else {
             snake.add(0, head);
             if (head.equals(food)) {
-                soundPool.play(correctSound, 1f, 1f, 1, 0, 1f);
+                try {
+                    soundPool.play(correctSound, 1f, 1f, 1, 0, 1f);
+                } catch (Exception e) {
+                    Log.e("GameView", "Error playing correct sound");
+                }
                 score++;
                 spawnMathQuestion();
             } else if (showBonus && bonusFood != null && head.equals(bonusFood)) {
-                soundPool.play(bonusSound, 1f, 1f, 1, 0, 1f);
+                try {
+                    soundPool.play(bonusSound, 1f, 1f, 1, 0, 1f);
+                } catch (Exception e) {
+                    Log.e("GameView", "Error playing bonus sound");
+                }
                 score += bonusValue;
                 showBonus = false;
                 bonusFood = null;
@@ -318,22 +381,61 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        thread.setRunning(true);
-        thread.start();
-    }
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) { }
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        thread.setRunning(false);
-        try { thread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
+        Log.d("GameView", "Surface created");
+        if (thread != null && !thread.isRunning()) {
+            thread.setRunning(true);
+            try {
+                thread.start();
+            } catch (IllegalThreadStateException e) {
+                // El thread ya fue iniciado, crear uno nuevo
+                thread = new GameThread(getHolder(), this);
+                thread.setRunning(true);
+                thread.start();
+            }
+        }
     }
 
-    public void pause() { thread.setRunning(false); }
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        Log.d("GameView", "Surface changed: " + width + "x" + height);
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        Log.d("GameView", "Surface destroyed");
+        if (thread != null) {
+            thread.setRunning(false);
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void pause() {
+        Log.d("GameView", "Pausing game");
+        if (thread != null) {
+            thread.setRunning(false);
+            try {
+                thread.join(); // Espera a que termine el thread
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public void resume() {
-        if (!thread.isRunning()) {
+        Log.d("GameView", "Resuming game");
+        if (thread != null && !thread.isRunning()) {
+            // Crear un nuevo thread en lugar de reusar el anterior
+            thread = new GameThread(getHolder(), this);
             thread.setRunning(true);
-            thread.start();
+            try {
+                thread.start();
+            } catch (IllegalThreadStateException e) {
+                Log.e("GameView", "Error starting thread: " + e.getMessage());
+            }
         }
     }
 }

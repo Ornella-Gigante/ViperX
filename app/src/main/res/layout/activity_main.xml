@@ -1,14 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/rootFrame"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/background_fun_gradient">
 
-    <include layout="@layout/layer_background"/>
+    <!-- Capa del juego (inicialmente oculta) -->
+    <es.nellagames.viperx.GameView
+        android:id="@+id/gameView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 
-    <include layout="@layout/layer_menu"/>
+    <!-- Capa del menú (inicialmente visible) -->
+    <LinearLayout
+        android:id="@+id/menuLayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@android:color/transparent"
+        android:visibility="visible">
 
-    <include layout="@layout/layer_instructions"/>
+        <ImageView
+            android:src="@drawable/snake"
+            android:layout_width="260dp"
+            android:layout_height="260dp"
+            android:layout_marginBottom="4dp"
+            android:contentDescription="Snake"/>
 
-    <include layout="@layout/layer_game"/>
+        <TextView
+            android:id="@+id/highScoreLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="High Score: 0"
+            android:textSize="22sp"
+            android:textColor="#22223B"
+            android:layout_margin="16dp"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/playButton"
+            android:layout_width="220dp"
+            android:layout_height="wrap_content"
+            android:text="PLAY"
+            android:textSize="24sp"
+            android:backgroundTint="#B983FF"
+            android:textColor="#fff3b0"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="6dp"/>
+
+        <Button
+            android:id="@+id/instructionsButton"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:text="Instructions"
+            android:textSize="18sp"
+            android:backgroundTint="#577590"
+            android:textColor="#fff3b0"
+            android:layout_marginTop="8dp"/>
+
+    </LinearLayout>
+
 </FrameLayout>

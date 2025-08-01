@@ -1,86 +1,185 @@
 package es.nellagames.viperx;
 
-import android.media.MediaPlayer;
+import android.app.Activity;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
+
     private GameView gameView;
-    private MediaPlayer backgroundMusic;
     private LinearLayout menuLayer;
-    private View instructionsLayer;
     private TextView highScoreLabel;
+    private Button playButton, instructionsButton;
+    private SharedPreferences prefs;
     private int highScore = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Pantalla completa
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
         setContentView(R.layout.activity_main);
 
-        // Layer references from included layouts
-        menuLayer = findViewById(R.id.menuLayer);
-        instructionsLayer = findViewById(R.id.instructionsLayer);
+        // Inicializar SharedPreferences para high score
+        prefs = getSharedPreferences("ViperXPrefs", MODE_PRIVATE);
+        highScore = prefs.getInt("highScore", 0);
+
+        // Encontrar vistas
         gameView = findViewById(R.id.gameView);
+        menuLayer = findViewById(R.id.menuLayer);
         highScoreLabel = findViewById(R.id.highScoreLabel);
+        playButton = findViewById(R.id.playButton);
+        instructionsButton = findViewById(R.id.instructionsButton);
 
-        backgroundMusic = MediaPlayer.create(this, R.raw.main_music);
-        backgroundMusic.setLooping(true);
-        backgroundMusic.start();
+        // Actualizar high score en el menú
+        updateHighScoreDisplay();
 
-        // PLAY button
-        Button playButton = findViewById(R.id.playButton);
-        if (playButton != null) {
-            playButton.setOnClickListener(v -> {
-                menuLayer.setVisibility(View.GONE);
-                instructionsLayer.setVisibility(View.GONE);
-                gameView.setVisibility(View.VISIBLE);
-                gameView.restartGame();
-            });
+        // Configurar listeners
+        playButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startGame();
+            }
+        });
+
+        instructionsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showInstructions();
+            }
+        });
+
+        // Inicialmente mostrar menú, ocultar juego
+        showMenu();
+
+        Log.d("MainActivity", "Activity created successfully");
+    }
+
+    private void startGame() {
+        Log.d("MainActivity", "Starting game...");
+
+        // Ocultar menú
+        menuLayer.setVisibility(View.GONE);
+
+        // Mostrar y iniciar juego
+        gameView.setVisibility(View.VISIBLE);
+        gameView.restartGame();
+        gameView.resume();
+
+        Log.d("MainActivity", "Game started");
+    }
+
+    private void showMenu() {
+        Log.d("MainActivity", "Showing menu...");
+
+        // Pausar juego si está corriendo
+        if (gameView != null) {
+            gameView.pause();
+            gameView.setVisibility(View.GONE);
         }
 
-        // INSTRUCTIONS button
-        Button instructionsButton = findViewById(R.id.instructionsButton);
-        if (instructionsButton != null) {
-            instructionsButton.setOnClickListener(v -> {
-                menuLayer.setVisibility(View.GONE);
-                instructionsLayer.setVisibility(View.VISIBLE);
-            });
-        }
+        // Mostrar menú
+        menuLayer.setVisibility(View.VISIBLE);
+        updateHighScoreDisplay();
 
-        // BACK from instructions
-        Button backButton = findViewById(R.id.backFromInstructionsButton);
-        if (backButton != null) {
-            backButton.setOnClickListener(v -> {
-                instructionsLayer.setVisibility(View.GONE);
-                menuLayer.setVisibility(View.VISIBLE);
-            });
+        Log.d("MainActivity", "Menu shown");
+    }
+
+    private void showInstructions() {
+        // Aquí puedes implementar un diálogo o nueva actividad con instrucciones
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Instructions");
+        builder.setMessage("🐍 VIPER X - Math Snake Game\n\n" +
+                "• Swipe to move the snake\n" +
+                "• Eat the food with the correct answer\n" +
+                "• Solve math problems to grow\n" +
+                "• Avoid hitting walls or yourself\n" +
+                "• Collect bonus food for extra points!\n\n" +
+                "Good luck!");
+        builder.setPositiveButton("Got it!", null);
+        builder.show();
+    }
+
+    private void updateHighScoreDisplay() {
+        highScoreLabel.setText("High Score: " + highScore);
+    }
+
+    public void updateHighScore(int newScore) {
+        if (newScore > highScore) {
+            highScore = newScore;
+            prefs.edit().putInt("highScore", highScore).apply();
+            updateHighScoreDisplay();
+            Log.d("MainActivity", "New high score: " + highScore);
+        }
+    }
+
+    public void showGameOver(int finalScore) {
+        Log.d("MainActivity", "Game over with score: " + finalScore);
+        updateHighScore(finalScore);
+
+        // Mostrar diálogo de game over
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Game Over!");
+        builder.setMessage("Final Score: " + finalScore +
+                (finalScore == highScore ? "\n🎉 NEW HIGH SCORE! 🎉" : ""));
+        builder.setPositiveButton("Play Again", (dialog, which) -> startGame());
+        builder.setNegativeButton("Menu", (dialog, which) -> showMenu());
+        builder.setCancelable(false);
+        builder.show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d("MainActivity", "Activity resumed");
+        // No auto-resumir el juego, solo si ya estaba visible
+        if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
+            gameView.resume();
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if (backgroundMusic != null) backgroundMusic.pause();
-        if (gameView != null) gameView.pause();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (backgroundMusic != null) backgroundMusic.start();
-        if (gameView != null) gameView.resume();
+        Log.d("MainActivity", "Activity paused");
+        if (gameView != null) {
+            gameView.pause();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (backgroundMusic != null) {
-            backgroundMusic.release();
-            backgroundMusic = null;
+        Log.d("MainActivity", "Activity destroyed");
+        if (gameView != null) {
+            gameView.pause();
+        }
+    }
+
+    // Método para que GameView pueda llamar cuando termine el juego
+    public void onGameFinished(int score) {
+        runOnUiThread(() -> showGameOver(score));
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
+            // Si el juego está visible, volver al menú
+            showMenu();
+        } else {
+            // Si está en el menú, salir de la app
+            super.onBackPressed();
         }
     }
 }
