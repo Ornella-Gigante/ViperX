@@ -31,6 +31,7 @@
         android:layout_height="wrap_content"
         android:text="PLAY"
         android:textSize="24sp"
+        android:background="@drawable/rounded_btn"
         android:backgroundTint="#B983FF"
         android:textColor="#fff3b0"
         android:layout_marginTop="20dp"

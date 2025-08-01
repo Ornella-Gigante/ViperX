@@ -11,6 +11,11 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.Outline;
+import android.util.TypedValue;
+import android.view.ViewOutlineProvider;
 
 public class MainActivity extends Activity {
 
@@ -23,22 +28,21 @@ public class MainActivity extends Activity {
     private int highScore = 0;
     private MediaPlayer backgroundMusic;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Pantalla completa, opcional
+        // Pantalla completa
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         setContentView(R.layout.activity_main);
 
-        backgroundMusic = MediaPlayer.create(this, R.raw.main_music); // Usa el nombre que tengas: main_music.mp3
+        // Inicializar música de fondo
+        backgroundMusic = MediaPlayer.create(this, R.raw.main_music);
         backgroundMusic.setLooping(true);
         backgroundMusic.start();
-
 
         // Inicializar SharedPreferences para high score
         prefs = getSharedPreferences("ViperXPrefs", MODE_PRIVATE);
@@ -54,6 +58,11 @@ public class MainActivity extends Activity {
         backFromInstructionsButton = findViewById(R.id.backFromInstructionsButton);
 
         updateHighScoreDisplay();
+
+        // === Bordes redondeados para los botones usando OutlineProvider ===
+        applyRoundedCorners(playButton, "#B983FF");
+        applyRoundedCorners(instructionsButton, "#577590");
+        applyRoundedCorners(backFromInstructionsButton, "#B983FF"); // Para instrucciones
 
         // PLAY -- mostrar el juego
         playButton.setOnClickListener(new View.OnClickListener() {
@@ -90,6 +99,30 @@ public class MainActivity extends Activity {
         showMenu();
         Log.d("MainActivity", "Activity started");
     }
+
+    // Aplica esquinas redondeadas a un botón por código (sin shape!)
+    private void applyRoundedCorners(final Button button, final String colorHex) {
+        if (button == null) return;
+
+        button.setStateListAnimator(null);
+        button.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(colorHex)));
+        button.setClipToOutline(true);
+
+        final float radiusPx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 18, button.getResources().getDisplayMetrics()
+        );
+
+        button.post(() -> {
+            button.setOutlineProvider(new ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, Outline outline) {
+                    // Asegura que ya hay tamaño al momento de crear el borde
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radiusPx);
+                }
+            });
+        });
+    }
+
 
     private void showMenu() {
         if (gameView != null) {
@@ -135,17 +168,23 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        if (backgroundMusic != null && backgroundMusic.isPlaying()) backgroundMusic.pause();
-        if (gameView != null) gameView.pause();
-    }
-    @Override
     protected void onResume() {
         super.onResume();
-        if (backgroundMusic != null && !backgroundMusic.isPlaying()) backgroundMusic.start();
-        if (gameView != null && gameView.getVisibility() == View.VISIBLE) gameView.resume();
+        if (backgroundMusic != null && !backgroundMusic.isPlaying())
+            backgroundMusic.start();
+        if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
+            gameView.resume();
+        }
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (backgroundMusic != null && backgroundMusic.isPlaying())
+            backgroundMusic.pause();
+        if (gameView != null) gameView.pause();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -156,6 +195,10 @@ public class MainActivity extends Activity {
         if (gameView != null) gameView.pause();
     }
 
+    // Llamar esto desde GameView cuando termine la partida:
+    public void onGameFinished(int score) {
+        runOnUiThread(() -> showGameOver(score));
+    }
 
     @Override
     public void onBackPressed() {
