@@ -8,6 +8,23 @@
     android:background="@android:color/transparent"
     android:visibility="visible">
 
+    <TextView
+        android:id="@+id/gameTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="VIPER X"
+        android:textSize="38sp"
+        android:textStyle="bold"
+        android:fontFamily="cursive"
+        android:textColor="#7B2FF2"
+        android:shadowColor="#fff800"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="6"
+        android:paddingBottom="12dp"
+        android:paddingTop="8dp"
+        android:background="@android:color/transparent"/>
+
     <ImageView
         android:src="@drawable/snake"
         android:layout_width="260dp"
