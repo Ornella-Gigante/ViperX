@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -32,8 +33,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private int bonusValue = 5;
     private boolean showBonus = false;
 
-    private Paint questionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    // TextViews para mostrar información
+    private TextView questionTextView;
+    private TextView scoreTextView;
 
     // SOUND EFFECTS
     private SoundPool soundPool;
@@ -56,14 +58,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         thread = new GameThread(getHolder(), this);
         restartGame();
 
-        questionPaint.setColor(Color.rgb(33, 150, 243));
-        questionPaint.setTextSize(65f);
-        questionPaint.setTypeface(Typeface.DEFAULT_BOLD);
-
-        scorePaint.setColor(Color.rgb(50, 50, 50));
-        scorePaint.setTextSize(40f);
-        scorePaint.setTypeface(Typeface.DEFAULT);
-
         try {
             soundPool = new SoundPool.Builder().setMaxStreams(4).build();
             correctSound = soundPool.load(context, R.raw.correct, 1);
@@ -74,7 +68,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             Log.e("GameView", "Error loading sounds: " + e.getMessage());
         }
 
-        // Load all bitmap assets con manejo de errores
         try {
             head_up = BitmapFactory.decodeResource(getResources(), R.drawable.head_up);
             head_down = BitmapFactory.decodeResource(getResources(), R.drawable.head_down);
@@ -107,7 +100,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     private void createFallbackBitmaps() {
-        int size = 70; // usado solo como fallback
+        int size = 70; // solo para fallback
         head_up = head_down = head_left = head_right = createColorBitmap(size, Color.GREEN);
         body_vertical = body_horizontal = body_topleft = body_topright =
                 body_bottomleft = body_bottomright = createColorBitmap(size, Color.BLUE);
@@ -124,6 +117,23 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         paint.setColor(color);
         canvas.drawRect(0, 0, size, size, paint);
         return bitmap;
+    }
+
+    // Método para conectar las TextViews
+    public void setTextViews(TextView questionText, TextView scoreText) {
+        this.questionTextView = questionText;
+        this.scoreTextView = scoreText;
+        updateTextViews(); // Actualizar inmediatamente
+    }
+
+    // Método para actualizar los TextViews
+    private void updateTextViews() {
+        if (questionTextView != null) {
+            questionTextView.post(() -> questionTextView.setText("Q: " + questionA + " " + operation + " " + questionB + " = ?"));
+        }
+        if (scoreTextView != null) {
+            scoreTextView.post(() -> scoreTextView.setText("Score: " + score));
+        }
     }
 
     public void restartGame() {
@@ -160,6 +170,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         } else {
             bonusFood = null;
         }
+        updateTextViews(); // Actualizar TextViews cuando cambie la pregunta
     }
 
     private boolean snakeContains(Point p) {
@@ -170,28 +181,41 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
-        if (canvas == null) {
-            Log.d("GameView", "Canvas is null!");
-            return;
-        }
+        if (canvas == null) return;
 
-        // ==== CÁLCULOS DINÁMICOS DE GRID/CELDA ====
-        int panelHeight = 120; // altura barra superior
+        // Hacer el fondo transparente
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+
+        // Actualizar TextViews
+        updateTextViews();
+
+        // ==== Cuadrícula centrada que usa todo el espacio disponible ====
         int gridRows = numCells, gridCols = numCells;
-        int availableWidth = canvas.getWidth();
-        int availableHeight = canvas.getHeight() - panelHeight;
+        int availableWidth = canvas.getWidth() - 32; // Margen para el gradiente
+        int availableHeight = canvas.getHeight() - 16; // Margen para el gradiente
         int cellSizeDynamic = Math.min(availableWidth / gridCols, availableHeight / gridRows);
-
         int gridWidth = cellSizeDynamic * gridCols;
         int gridHeight = cellSizeDynamic * gridRows;
-        int offsetX = (availableWidth - gridWidth) / 2;
-        int offsetY = panelHeight + (availableHeight - gridHeight) / 2;
+        int offsetX = (canvas.getWidth() - gridWidth) / 2;
+        int offsetY = (canvas.getHeight() - gridHeight) / 2;
 
-        // Checkerboard fondo extendido y centrado
-        int color1 = Color.rgb(170, 215, 81);
-        int color2 = Color.rgb(162, 209, 73);
+        // Dibujar fondo semi-transparente para la cuadrícula
+        Paint backgroundPaint = new Paint();
+        backgroundPaint.setColor(Color.argb(40, 255, 255, 255));
+        backgroundPaint.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(
+                offsetX - 8,
+                offsetY - 8,
+                offsetX + gridWidth + 8,
+                offsetY + gridHeight + 8,
+                12, 12,
+                backgroundPaint
+        );
+
+        // Dibujar cuadrícula con colores más suaves
+        int color1 = Color.argb(180, 170, 215, 81);
+        int color2 = Color.argb(180, 162, 209, 73);
         Paint squarePaint = new Paint();
-
         for (int y = 0; y < gridRows; y++) {
             for (int x = 0; x < gridCols; x++) {
                 squarePaint.setColor(((x + y) % 2 == 0) ? color1 : color2);
@@ -205,14 +229,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
-        // Barra superior - pregunta/score
-        Paint rectPaint = new Paint();
-        rectPaint.setColor(Color.rgb(230, 230, 250));
-        canvas.drawRect(0, 0, canvas.getWidth(), panelHeight - 10f, rectPaint);
-        canvas.drawText("Q: " + questionA + " " + operation + " " + questionB + " = ?", 25f, 75f, questionPaint);
-        canvas.drawText("Score: " + score, 20f, panelHeight + 40f, scorePaint);
-
-        // --- Dibuja la serpiente ---
+        // === Dibujar SNAKE ===
         for (int i = 0; i < snake.size(); i++) {
             Point p = snake.get(i);
             int x = offsetX + p.x * cellSizeDynamic;
@@ -256,7 +273,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 canvas.drawBitmap(Bitmap.createScaledBitmap(sprite, cellSizeDynamic, cellSizeDynamic, false), x, y, null);
         }
 
-        // --- Dibuja la comida ---
+        // Dibuja la comida con mejor contraste
         int fx = offsetX + food.x * cellSizeDynamic + 8;
         int fy = offsetY + food.y * cellSizeDynamic + 8;
         try {
@@ -268,16 +285,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             canvas.drawCircle(fx + (cellSizeDynamic - 16) / 2, fy + (cellSizeDynamic - 16) / 2, (cellSizeDynamic - 16) / 2, foodPaint);
         }
 
-        // Número encima de la comida
+        // Texto de la respuesta con mejor visibilidad
         Paint textPaint = new Paint();
-        textPaint.setColor(Color.BLACK);
-        textPaint.setTextSize(38f);
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(Math.max(28f, cellSizeDynamic * 0.4f));
         textPaint.setFakeBoldText(true);
-        canvas.drawText(String.valueOf(correctAnswer), offsetX + food.x * cellSizeDynamic + cellSizeDynamic / 4, offsetY + food.y * cellSizeDynamic + cellSizeDynamic / 2 + 12, textPaint);
+        textPaint.setStyle(Paint.Style.FILL);
+        textPaint.setShadowLayer(3, 1, 1, Color.BLACK);
+        textPaint.setTextAlign(Paint.Align.CENTER);
 
-        // --- Dibuja el bonus ---
+        String answerText = String.valueOf(correctAnswer);
+        canvas.drawText(answerText,
+                offsetX + food.x * cellSizeDynamic + cellSizeDynamic / 2,
+                offsetY + food.y * cellSizeDynamic + cellSizeDynamic / 2 + textPaint.getTextSize() / 3,
+                textPaint);
+
+        // Dibuja el bonus con mejor visibilidad
         if (showBonus && bonusFood != null) {
-            int bx = offsetX + bonusFood.x * cellSizeDynamic + 8, by = offsetY + bonusFood.y * cellSizeDynamic + 8;
+            int bx = offsetX + bonusFood.x * cellSizeDynamic + 8;
+            int by = offsetY + bonusFood.y * cellSizeDynamic + 8;
             try {
                 Bitmap bmp = foodBitmaps[(score + 1) % foodBitmaps.length];
                 canvas.drawBitmap(Bitmap.createScaledBitmap(bmp, cellSizeDynamic - 16, cellSizeDynamic - 16, false), bx, by, null);
@@ -286,21 +312,38 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 bonusPaint.setColor(Color.YELLOW);
                 canvas.drawCircle(bx + (cellSizeDynamic - 16) / 2, by + (cellSizeDynamic - 16) / 2, (cellSizeDynamic - 16) / 2, bonusPaint);
             }
+
             Paint bPaint = new Paint();
-            bPaint.setColor(Color.YELLOW);
-            bPaint.setTextSize(30f);
+            bPaint.setColor(Color.WHITE);
+            bPaint.setTextSize(Math.max(20f, cellSizeDynamic * 0.3f));
             bPaint.setFakeBoldText(true);
-            canvas.drawText("+" + bonusValue, offsetX + bonusFood.x * cellSizeDynamic + cellSizeDynamic / 6, offsetY + bonusFood.y * cellSizeDynamic + cellSizeDynamic / 2 + 14, bPaint);
+            bPaint.setShadowLayer(2, 1, 1, Color.BLACK);
+            bPaint.setTextAlign(Paint.Align.CENTER);
+
+            String bonusText = "+" + bonusValue;
+            canvas.drawText(bonusText,
+                    offsetX + bonusFood.x * cellSizeDynamic + cellSizeDynamic / 2,
+                    offsetY + bonusFood.y * cellSizeDynamic + cellSizeDynamic / 2 + bPaint.getTextSize() / 3,
+                    bPaint);
         }
 
-        // --- Game Over ---
         if (gameOver) {
+            // Fondo semi-transparente para el texto de Game Over
+            Paint overlayPaint = new Paint();
+            overlayPaint.setColor(Color.argb(180, 0, 0, 0));
+            canvas.drawRect(0, 0, getWidth(), getHeight(), overlayPaint);
+
             Paint overPaint = new Paint();
-            overPaint.setColor(Color.BLACK);
-            overPaint.setTextSize(80f);
+            overPaint.setColor(Color.WHITE);
+            overPaint.setTextSize(60f);
             overPaint.setFakeBoldText(true);
-            canvas.drawText("GAME OVER", 50, getHeight() / 2, overPaint);
-            canvas.drawText("Tap to Restart", 50, getHeight() / 2 + 100, overPaint);
+            overPaint.setTextAlign(Paint.Align.CENTER);
+            overPaint.setShadowLayer(4, 2, 2, Color.BLACK);
+
+            canvas.drawText("GAME OVER", getWidth() / 2, getHeight() / 2 - 50, overPaint);
+
+            overPaint.setTextSize(40f);
+            canvas.drawText("Tap to Restart", getWidth() / 2, getHeight() / 2 + 50, overPaint);
         }
     }
 

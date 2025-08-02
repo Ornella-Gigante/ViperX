@@ -11,6 +11,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.FrameLayout;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Outline;
@@ -21,7 +22,8 @@ public class MainActivity extends Activity {
 
     private GameView gameView;
     private LinearLayout menuLayer;
-    private View instructionsLayer;
+    private FrameLayout instructionsLayer;
+    private FrameLayout gameLayer;  // Agregado
     private TextView highScoreLabel;
     private Button playButton, instructionsButton, backFromInstructionsButton;
     private SharedPreferences prefs;
@@ -52,6 +54,7 @@ public class MainActivity extends Activity {
         gameView = findViewById(R.id.gameView);
         menuLayer = findViewById(R.id.menuLayer);
         instructionsLayer = findViewById(R.id.instructionsLayer);
+        gameLayer = findViewById(R.id.gameLayer);  // Agregado
         highScoreLabel = findViewById(R.id.highScoreLabel);
         playButton = findViewById(R.id.playButton);
         instructionsButton = findViewById(R.id.instructionsButton);
@@ -62,17 +65,13 @@ public class MainActivity extends Activity {
         // === Bordes redondeados para los botones usando OutlineProvider ===
         applyRoundedCorners(playButton, "#B983FF");
         applyRoundedCorners(instructionsButton, "#577590");
-        applyRoundedCorners(backFromInstructionsButton, "#B983FF"); // Para instrucciones
+        applyRoundedCorners(backFromInstructionsButton, "#B983FF");
 
-        // PLAY -- mostrar el juego
+        // PLAY -- mostrar el juego (CORREGIDO)
         playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                menuLayer.setVisibility(View.GONE);
-                instructionsLayer.setVisibility(View.GONE);
-                gameView.setVisibility(View.VISIBLE);
-                gameView.restartGame();
-                gameView.resume();
+                showGameLayer();  // Usar el método correcto
             }
         });
 
@@ -81,7 +80,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 menuLayer.setVisibility(View.GONE);
-                gameView.setVisibility(View.GONE);
+                gameLayer.setVisibility(View.GONE);  // Cambiar gameView por gameLayer
                 instructionsLayer.setVisibility(View.VISIBLE);
             }
         });
@@ -90,8 +89,7 @@ public class MainActivity extends Activity {
         backFromInstructionsButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                instructionsLayer.setVisibility(View.GONE);
-                menuLayer.setVisibility(View.VISIBLE);
+                showMenu();
             }
         });
 
@@ -116,22 +114,39 @@ public class MainActivity extends Activity {
             button.setOutlineProvider(new ViewOutlineProvider() {
                 @Override
                 public void getOutline(View view, Outline outline) {
-                    // Asegura que ya hay tamaño al momento de crear el borde
                     outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radiusPx);
                 }
             });
         });
     }
 
-
     private void showMenu() {
         if (gameView != null) {
             gameView.pause();
-            gameView.setVisibility(View.GONE);
         }
+        if (gameLayer != null) gameLayer.setVisibility(View.GONE);
         if (instructionsLayer != null) instructionsLayer.setVisibility(View.GONE);
         menuLayer.setVisibility(View.VISIBLE);
         updateHighScoreDisplay();
+    }
+
+    private void showGameLayer() {
+        // Conectar los TextViews con el GameView
+        TextView questionText = findViewById(R.id.questionText);
+        TextView scoreText = findViewById(R.id.scoreText);
+
+        if (questionText != null && scoreText != null) {
+            gameView.setTextViews(questionText, scoreText);
+        }
+
+        // Cambiar visibilidad
+        gameLayer.setVisibility(View.VISIBLE);
+        menuLayer.setVisibility(View.GONE);
+        instructionsLayer.setVisibility(View.GONE);
+
+        // Reiniciar y resumir el juego
+        gameView.restartGame();
+        gameView.resume();
     }
 
     private void updateHighScoreDisplay() {
@@ -156,11 +171,7 @@ public class MainActivity extends Activity {
         builder.setMessage("Final Score: " + finalScore +
                 (finalScore == highScore ? "\n🎉 NEW HIGH SCORE! 🎉" : ""));
         builder.setPositiveButton("Play Again", (dialog, which) -> {
-            menuLayer.setVisibility(View.GONE);
-            instructionsLayer.setVisibility(View.GONE);
-            gameView.setVisibility(View.VISIBLE);
-            gameView.restartGame();
-            gameView.resume();
+            showGameLayer();  // Usar showGameLayer en lugar de la lógica manual
         });
         builder.setNegativeButton("Menu", (dialog, which) -> showMenu());
         builder.setCancelable(false);
@@ -172,7 +183,7 @@ public class MainActivity extends Activity {
         super.onResume();
         if (backgroundMusic != null && !backgroundMusic.isPlaying())
             backgroundMusic.start();
-        if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
+        if (gameView != null && gameLayer != null && gameLayer.getVisibility() == View.VISIBLE) {
             gameView.resume();
         }
     }
@@ -202,7 +213,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (gameView != null && gameView.getVisibility() == View.VISIBLE) {
+        if (gameLayer != null && gameLayer.getVisibility() == View.VISIBLE) {
             showMenu();
         } else {
             super.onBackPressed();
