@@ -24,8 +24,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private String operation = "+";
     private int score = 0;
     private boolean gameOver = false;
-    private final int cellSize = 70;
-    private final int numCells = 10;
+    private final int numCells = 10; // cuadrícula 10x10
     private float startX, startY;
 
     // Bonus variables
@@ -53,7 +52,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
-
         getHolder().addCallback(this);
         thread = new GameThread(getHolder(), this);
         restartGame();
@@ -101,25 +99,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
 
             foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
-
             Log.d("GameView", "All bitmaps loaded successfully");
         } catch (Exception e) {
             Log.e("GameView", "Error loading bitmaps: " + e.getMessage());
-            // Crear bitmaps de fallback si hay error
             createFallbackBitmaps();
         }
     }
 
     private void createFallbackBitmaps() {
-        // Crear bitmaps simples de colores si no se pueden cargar las imágenes
-        int size = cellSize;
-
+        int size = 70; // usado solo como fallback
         head_up = head_down = head_left = head_right = createColorBitmap(size, Color.GREEN);
         body_vertical = body_horizontal = body_topleft = body_topright =
                 body_bottomleft = body_bottomright = createColorBitmap(size, Color.BLUE);
         tail_up = tail_down = tail_left = tail_right = createColorBitmap(size, Color.CYAN);
         apple = candy = sushi1 = sushi2 = createColorBitmap(size, Color.RED);
-
         foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
         Log.d("GameView", "Using fallback bitmaps");
     }
@@ -182,38 +175,49 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             return;
         }
 
-        Log.d("GameView", "Drawing game - Snake size: " + snake.size() + ", Score: " + score);
+        // ==== CÁLCULOS DINÁMICOS DE GRID/CELDA ====
+        int panelHeight = 120; // altura barra superior
+        int gridRows = numCells, gridCols = numCells;
+        int availableWidth = canvas.getWidth();
+        int availableHeight = canvas.getHeight() - panelHeight;
+        int cellSizeDynamic = Math.min(availableWidth / gridCols, availableHeight / gridRows);
 
-        // ----- FONDO CHECKERBOARD (tipo snake) -----
-        int offsetY = 120;
-        int size = cellSize;
-        int N = numCells;
+        int gridWidth = cellSizeDynamic * gridCols;
+        int gridHeight = cellSizeDynamic * gridRows;
+        int offsetX = (availableWidth - gridWidth) / 2;
+        int offsetY = panelHeight + (availableHeight - gridHeight) / 2;
+
+        // Checkerboard fondo extendido y centrado
         int color1 = Color.rgb(170, 215, 81);
         int color2 = Color.rgb(162, 209, 73);
         Paint squarePaint = new Paint();
 
-        for (int y = 0; y < N; y++) {
-            for (int x = 0; x < N; x++) {
+        for (int y = 0; y < gridRows; y++) {
+            for (int x = 0; x < gridCols; x++) {
                 squarePaint.setColor(((x + y) % 2 == 0) ? color1 : color2);
-                canvas.drawRect(x * size, y * size + offsetY, (x + 1) * size, (y + 1) * size + offsetY, squarePaint);
+                canvas.drawRect(
+                        offsetX + x * cellSizeDynamic,
+                        offsetY + y * cellSizeDynamic,
+                        offsetX + (x + 1) * cellSizeDynamic,
+                        offsetY + (y + 1) * cellSizeDynamic,
+                        squarePaint
+                );
             }
         }
 
-        // Barra superior con pregunta y marcador
+        // Barra superior - pregunta/score
         Paint rectPaint = new Paint();
         rectPaint.setColor(Color.rgb(230, 230, 250));
-        canvas.drawRect(0, 0, getWidth(), 110f, rectPaint);
-
+        canvas.drawRect(0, 0, canvas.getWidth(), panelHeight - 10f, rectPaint);
         canvas.drawText("Q: " + questionA + " " + operation + " " + questionB + " = ?", 25f, 75f, questionPaint);
-        canvas.drawText("Score: " + score, 20f, 160f, scorePaint);
+        canvas.drawText("Score: " + score, 20f, panelHeight + 40f, scorePaint);
 
-        // Dibuja la serpiente usando los sprites
+        // --- Dibuja la serpiente ---
         for (int i = 0; i < snake.size(); i++) {
             Point p = snake.get(i);
-            int x = p.x * size;
-            int y = p.y * size + offsetY;
+            int x = offsetX + p.x * cellSizeDynamic;
+            int y = offsetY + p.y * cellSizeDynamic;
             Bitmap sprite = null;
-
             if (i == 0) {
                 Direction headDir = direction;
                 if (snake.size() > 1) {
@@ -248,29 +252,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                         sprite = body_bottomright;
                 }
             }
-            if (sprite != null) {
-                try {
-                    canvas.drawBitmap(Bitmap.createScaledBitmap(sprite, size, size, false), x, y, null);
-                } catch (Exception e) {
-                    // Fallback: dibujar rectángulo de color
-                    Paint fallbackPaint = new Paint();
-                    fallbackPaint.setColor(i == 0 ? Color.GREEN : Color.BLUE);
-                    canvas.drawRect(x, y, x + size, y + size, fallbackPaint);
-                }
-            }
+            if (sprite != null)
+                canvas.drawBitmap(Bitmap.createScaledBitmap(sprite, cellSizeDynamic, cellSizeDynamic, false), x, y, null);
         }
 
-        // Dibuja la comida
-        int fx = food.x * size + 8;
-        int fy = food.y * size + offsetY + 8;
+        // --- Dibuja la comida ---
+        int fx = offsetX + food.x * cellSizeDynamic + 8;
+        int fy = offsetY + food.y * cellSizeDynamic + 8;
         try {
             Bitmap foodBmp = foodBitmaps[Math.abs(correctAnswer) % foodBitmaps.length];
-            canvas.drawBitmap(Bitmap.createScaledBitmap(foodBmp, size - 16, size - 16, false), fx, fy, null);
+            canvas.drawBitmap(Bitmap.createScaledBitmap(foodBmp, cellSizeDynamic - 16, cellSizeDynamic - 16, false), fx, fy, null);
         } catch (Exception e) {
-            // Fallback: dibujar círculo rojo
             Paint foodPaint = new Paint();
             foodPaint.setColor(Color.RED);
-            canvas.drawCircle(fx + (size - 16) / 2, fy + (size - 16) / 2, (size - 16) / 2, foodPaint);
+            canvas.drawCircle(fx + (cellSizeDynamic - 16) / 2, fy + (cellSizeDynamic - 16) / 2, (cellSizeDynamic - 16) / 2, foodPaint);
         }
 
         // Número encima de la comida
@@ -278,28 +273,27 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         textPaint.setColor(Color.BLACK);
         textPaint.setTextSize(38f);
         textPaint.setFakeBoldText(true);
-        canvas.drawText(String.valueOf(correctAnswer), food.x * size + size / 4, food.y * size + offsetY + size / 2 + 12, textPaint);
+        canvas.drawText(String.valueOf(correctAnswer), offsetX + food.x * cellSizeDynamic + cellSizeDynamic / 4, offsetY + food.y * cellSizeDynamic + cellSizeDynamic / 2 + 12, textPaint);
 
-        // Dibuja el bonus
+        // --- Dibuja el bonus ---
         if (showBonus && bonusFood != null) {
-            int bx = bonusFood.x * size + 8, by = bonusFood.y * size + offsetY + 8;
+            int bx = offsetX + bonusFood.x * cellSizeDynamic + 8, by = offsetY + bonusFood.y * cellSizeDynamic + 8;
             try {
                 Bitmap bmp = foodBitmaps[(score + 1) % foodBitmaps.length];
-                canvas.drawBitmap(Bitmap.createScaledBitmap(bmp, size - 16, size - 16, false), bx, by, null);
+                canvas.drawBitmap(Bitmap.createScaledBitmap(bmp, cellSizeDynamic - 16, cellSizeDynamic - 16, false), bx, by, null);
             } catch (Exception e) {
-                // Fallback: dibujar círculo amarillo
                 Paint bonusPaint = new Paint();
                 bonusPaint.setColor(Color.YELLOW);
-                canvas.drawCircle(bx + (size - 16) / 2, by + (size - 16) / 2, (size - 16) / 2, bonusPaint);
+                canvas.drawCircle(bx + (cellSizeDynamic - 16) / 2, by + (cellSizeDynamic - 16) / 2, (cellSizeDynamic - 16) / 2, bonusPaint);
             }
             Paint bPaint = new Paint();
             bPaint.setColor(Color.YELLOW);
             bPaint.setTextSize(30f);
             bPaint.setFakeBoldText(true);
-            canvas.drawText("+" + bonusValue, bonusFood.x * size + size / 6, bonusFood.y * size + offsetY + size / 2 + 14, bPaint);
+            canvas.drawText("+" + bonusValue, offsetX + bonusFood.x * cellSizeDynamic + cellSizeDynamic / 6, offsetY + bonusFood.y * cellSizeDynamic + cellSizeDynamic / 2 + 14, bPaint);
         }
 
-        // Game Over
+        // --- Game Over ---
         if (gameOver) {
             Paint overPaint = new Paint();
             overPaint.setColor(Color.BLACK);
@@ -387,19 +381,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             try {
                 thread.start();
             } catch (IllegalThreadStateException e) {
-                // El thread ya fue iniciado, crear uno nuevo
                 thread = new GameThread(getHolder(), this);
                 thread.setRunning(true);
                 thread.start();
             }
         }
     }
-
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        Log.d("GameView", "Surface changed: " + width + "x" + height);
-    }
-
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.d("GameView", "Surface destroyed");
@@ -407,9 +396,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             thread.setRunning(false);
             try {
                 thread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            } catch (InterruptedException e) { e.printStackTrace(); }
         }
     }
 
@@ -418,17 +405,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         if (thread != null) {
             thread.setRunning(false);
             try {
-                thread.join(); // Espera a que termine el thread
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+                thread.join();
+            } catch (InterruptedException e) { e.printStackTrace(); }
         }
     }
 
     public void resume() {
         Log.d("GameView", "Resuming game");
         if (thread != null && !thread.isRunning()) {
-            // Crear un nuevo thread en lugar de reusar el anterior
             thread = new GameThread(getHolder(), this);
             thread.setRunning(true);
             try {
