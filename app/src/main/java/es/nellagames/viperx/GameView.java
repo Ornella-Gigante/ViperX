@@ -225,7 +225,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         // Dibujar cuadrícula
         Paint gridPaint = new Paint();
-        gridPaint.setColor(Color.GRAY);
+        gridPaint.setColor(Color.GREEN);
         gridPaint.setStrokeWidth(1);
         for (int i = 0; i <= gridCols; i++) {
             int x = offsetX + i * cellSizeDynamic;
