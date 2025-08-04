@@ -69,7 +69,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         super(context, attrs);
         getHolder().addCallback(this);
         thread = new GameThread(getHolder(), this);
-        restartGame();
 
         try {
             soundPool = new SoundPool.Builder().setMaxStreams(4).build();
@@ -105,6 +104,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         } catch (Exception e) {
             createFallbackBitmaps();
         }
+
+        // Inicializar el juego DESPUÉS de cargar los bitmaps
+        restartGame();
     }
 
     private void createFallbackBitmaps() {
@@ -155,6 +157,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         operation = rand.nextBoolean() ? "+" : "-";
         correctAnswer = operation.equals("+") ? questionA + questionB : questionA - questionB;
 
+        // Verificar que foodBitmaps no sea null
+        if (foodBitmaps == null || foodBitmaps.length == 0) {
+            Log.e("GameView", "foodBitmaps is null or empty, creating fallback bitmaps");
+            createFallbackBitmaps();
+        }
+
         // Generar posición comestible correcta
         correctFood = new FoodItem(getRandomFreePoint(), correctAnswer, true, foodBitmaps[Math.abs(correctAnswer) % foodBitmaps.length]);
 
@@ -181,11 +189,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         Point p;
         do {
             p = new Point(rand.nextInt(numCells), rand.nextInt(numCells));
-        } while (snakeContains(p)
+        } while (isPositionOccupied(p));
+        return p;
+    }
+
+    private boolean isPositionOccupied(Point p) {
+        return snakeContains(p)
                 || (correctFood != null && p.equals(correctFood.position))
                 || wrongFoods.stream().anyMatch(f -> f.position.equals(p))
-                || (bonusFood != null && p.equals(bonusFood.position)));
-        return p;
+                || (bonusFood != null && p.equals(bonusFood.position));
     }
 
     private boolean snakeContains(Point p) {
