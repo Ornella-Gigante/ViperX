@@ -223,9 +223,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         int offsetX = (canvas.getWidth() - gridWidth) / 2;
         int offsetY = (canvas.getHeight() - gridHeight) / 2;
 
+
+        // Dibujar fondo verde para cada celda de la cuadrícula
+        Paint cellPaint = new Paint();
+        cellPaint.setColor(Color.rgb(198, 255, 198));
+        for (int row = 0; row < gridRows; row++) {
+            for (int col = 0; col < gridCols; col++) {
+                int x = offsetX + col * cellSizeDynamic;
+                int y = offsetY + row * cellSizeDynamic;
+                canvas.drawRect(x, y, x + cellSizeDynamic, y + cellSizeDynamic, cellPaint);
+            }
+        }
+
         // Dibujar cuadrícula
         Paint gridPaint = new Paint();
-        gridPaint.setColor(Color.GREEN);
+        gridPaint.setColor(Color.BLACK);
         gridPaint.setStrokeWidth(1);
         for (int i = 0; i <= gridCols; i++) {
             int x = offsetX + i * cellSizeDynamic;
