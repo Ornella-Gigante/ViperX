@@ -210,7 +210,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         super.draw(canvas);
         if (canvas == null) return;
 
-        // FONDO transparente y cuadrícula (igual que antes)...
+        // Limpiar canvas con fondo negro
+        canvas.drawColor(Color.BLACK);
+
+        // Calcular dimensiones de la cuadrícula
         int gridRows = numCells, gridCols = numCells;
         int availableWidth = canvas.getWidth() - 32;
         int availableHeight = canvas.getHeight() - 16;
@@ -220,13 +223,77 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         int offsetX = (canvas.getWidth() - gridWidth) / 2;
         int offsetY = (canvas.getHeight() - gridHeight) / 2;
 
-        // Dibuja SNAKE (igual que antes)...
+        // Dibujar cuadrícula
+        Paint gridPaint = new Paint();
+        gridPaint.setColor(Color.GRAY);
+        gridPaint.setStrokeWidth(1);
+        for (int i = 0; i <= gridCols; i++) {
+            int x = offsetX + i * cellSizeDynamic;
+            canvas.drawLine(x, offsetY, x, offsetY + gridHeight, gridPaint);
+        }
+        for (int i = 0; i <= gridRows; i++) {
+            int y = offsetY + i * cellSizeDynamic;
+            canvas.drawLine(offsetX, y, offsetX + gridWidth, y, gridPaint);
+        }
 
-        // --- DIBUJAR ALIMENTOS (quiz foods) ---
+        // DIBUJAR SERPIENTE
+        if (snake != null && !snake.isEmpty()) {
+            for (int i = 0; i < snake.size(); i++) {
+                Point segment = snake.get(i);
+                int x = offsetX + segment.x * cellSizeDynamic;
+                int y = offsetY + segment.y * cellSizeDynamic;
+
+                Bitmap segmentBitmap;
+
+                if (i == 0) {
+                    // Cabeza de la serpiente
+                    switch (direction) {
+                        case UP: segmentBitmap = head_up; break;
+                        case DOWN: segmentBitmap = head_down; break;
+                        case LEFT: segmentBitmap = head_left; break;
+                        case RIGHT: segmentBitmap = head_right; break;
+                        default: segmentBitmap = head_right; break;
+                    }
+                } else if (i == snake.size() - 1) {
+                    // Cola de la serpiente
+                    Point prev = snake.get(i - 1);
+                    if (prev.x > segment.x) segmentBitmap = tail_right;
+                    else if (prev.x < segment.x) segmentBitmap = tail_left;
+                    else if (prev.y > segment.y) segmentBitmap = tail_down;
+                    else segmentBitmap = tail_up;
+                } else {
+                    // Cuerpo de la serpiente
+                    Point prev = snake.get(i - 1);
+                    Point next = snake.get(i + 1);
+
+                    if ((prev.x == next.x) || (prev.y == next.y)) {
+                        // Segmento recto
+                        if (prev.x == next.x) segmentBitmap = body_vertical;
+                        else segmentBitmap = body_horizontal;
+                    } else {
+                        // Segmento curvo
+                        if ((prev.x < segment.x && next.y < segment.y) || (next.x < segment.x && prev.y < segment.y)) {
+                            segmentBitmap = body_topleft;
+                        } else if ((prev.x > segment.x && next.y < segment.y) || (next.x > segment.x && prev.y < segment.y)) {
+                            segmentBitmap = body_topright;
+                        } else if ((prev.x < segment.x && next.y > segment.y) || (next.x < segment.x && prev.y > segment.y)) {
+                            segmentBitmap = body_bottomleft;
+                        } else {
+                            segmentBitmap = body_bottomright;
+                        }
+                    }
+                }
+
+                canvas.drawBitmap(Bitmap.createScaledBitmap(segmentBitmap, cellSizeDynamic, cellSizeDynamic, false), x, y, null);
+            }
+        }
+
+        // DIBUJAR ALIMENTOS (quiz foods)
         drawFood(canvas, correctFood, offsetX, offsetY, cellSizeDynamic);
         for (FoodItem wf : wrongFoods) drawFood(canvas, wf, offsetX, offsetY, cellSizeDynamic);
         if (bonusFood != null) drawFood(canvas, bonusFood, offsetX, offsetY, cellSizeDynamic);
 
+        // GAME OVER overlay
         if (gameOver) {
             Paint overlayPaint = new Paint();
             overlayPaint.setColor(Color.argb(180, 0, 0, 0));
@@ -254,6 +321,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         paint.setTextSize(cellSize * 0.5f);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTypeface(Typeface.DEFAULT_BOLD);
+        paint.setShadowLayer(2, 1, 1, Color.BLACK);
         canvas.drawText(String.valueOf(food.value), x + cellSize / 2, y + cellSize / 2 + paint.getTextSize() / 3, paint);
     }
 
@@ -277,11 +345,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         }
         snake.add(0, head);
 
-        // --- COLISIONES ---
-        if (head.equals(correctFood.position)) {
+        // COLISIONES
+        if (correctFood != null && head.equals(correctFood.position)) {
             score++;
             if (soundPool != null) soundPool.play(correctSound, 1.0f, 1.0f, 0, 0, 1.0f);
             spawnQuizAndFoods();
+            updateTextViews();
             return;
         }
         for (FoodItem f : wrongFoods) {
@@ -295,6 +364,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             score += bonusValue;
             if (soundPool != null) soundPool.play(bonusSound, 1.0f, 1.0f, 0, 0, 1.0f);
             bonusFood = null;
+            updateTextViews();
             return;
         }
         snake.remove(snake.size() - 1);
