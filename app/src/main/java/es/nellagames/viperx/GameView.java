@@ -30,7 +30,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private int bonusValue = 5;
 
     // Velocidad del juego más lenta para dar tiempo a los cálculos
-    private final long gameSpeed = 800; // Milisegundos entre movimientos (más alto = más lento)
+    private final long gameSpeed = 1200; // Milisegundos entre movimientos (más lento para mejor gameplay)
 
     // TextViews para mostrar información
     private TextView questionTextView;
@@ -226,7 +226,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         int offsetX = (canvas.getWidth() - gridWidth) / 2;
         int offsetY = (canvas.getHeight() - gridHeight) / 2;
 
-
         // Dibujar fondo verde para cada celda de la cuadrícula
         Paint cellPaint = new Paint();
         cellPaint.setColor(Color.rgb(198, 255, 198));
@@ -238,14 +237,18 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
-        // Dibujar cuadrícula
+        // Dibujar cuadrícula - Líneas verticales
         Paint gridPaint = new Paint();
         gridPaint.setColor(Color.BLACK);
-        gridPaint.setStrokeWidth(1);
+        gridPaint.setStrokeWidth(2);
+
+        // Líneas verticales (de arriba a abajo)
         for (int i = 0; i <= gridCols; i++) {
             int x = offsetX + i * cellSizeDynamic;
             canvas.drawLine(x, offsetY, x, offsetY + gridHeight, gridPaint);
         }
+
+        // Líneas horizontales (de izquierda a derecha)
         for (int i = 0; i <= gridRows; i++) {
             int y = offsetY + i * cellSizeDynamic;
             canvas.drawLine(offsetX, y, offsetX + gridWidth, y, gridPaint);
@@ -342,10 +345,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     public void update() {
         if (gameOver) return;
+
+        // Aplicar dirección pendiente si es válida
         if (pendingDirection != null && !direction.isOpposite(pendingDirection)) {
             direction = pendingDirection;
             pendingDirection = null;
         }
+
+        // Calcular nueva posición de la cabeza
         Point head = new Point(snake.get(0));
         switch (direction) {
             case UP: head.y -= 1; break;
@@ -353,16 +360,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case LEFT: head.x -= 1; break;
             case RIGHT: head.x += 1; break;
         }
+
+        // Verificar colisiones con paredes o consigo misma
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
             if (soundPool != null) soundPool.play(loseSound, 1.0f, 1.0f, 0, 0, 1.0f);
             return;
         }
+
+        // Añadir nueva cabeza
         snake.add(0, head);
 
-        // COLISIONES
+        // COLISIONES CON ALIMENTOS
         boolean foodEaten = false;
 
+        // Verificar comida correcta
         if (correctFood != null && head.equals(correctFood.position)) {
             score++;
             if (soundPool != null) soundPool.play(correctSound, 1.0f, 1.0f, 0, 0, 1.0f);
@@ -373,6 +385,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             // Verificar colisión con comida incorrecta
             for (FoodItem f : wrongFoods) {
                 if (head.equals(f.position)) {
+                    // Reproducir sonido de error específicamente
                     if (soundPool != null) soundPool.play(errorSound, 1.0f, 1.0f, 0, 0, 1.0f);
                     // La serpiente se hace más pequeña (pierde 1 segmento extra)
                     if (snake.size() > 2) { // Asegurar que la serpiente tenga al menos 2 segmentos
@@ -407,6 +420,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             restartGame();
             return true;
         }
+
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 startX = event.getX();
@@ -415,9 +429,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case MotionEvent.ACTION_UP:
                 float dx = event.getX() - startX;
                 float dy = event.getY() - startY;
+
+                // Determinar dirección basada en el movimiento más grande
                 if (Math.abs(dx) > Math.abs(dy)) {
+                    // Movimiento horizontal
                     pendingDirection = dx > 0 ? Direction.RIGHT : Direction.LEFT;
                 } else {
+                    // Movimiento vertical
                     pendingDirection = dy > 0 ? Direction.DOWN : Direction.UP;
                 }
                 break;
@@ -437,19 +455,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
     }
-    @Override public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
-    @Override public void surfaceDestroyed(SurfaceHolder holder) {
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
         if (thread != null) {
             thread.setRunning(false);
             try { thread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
         }
     }
+
     public void pause() {
         if (thread != null) {
             thread.setRunning(false);
             try { thread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
         }
     }
+
     public void resume() {
         if (thread != null && !thread.isRunning()) {
             thread = new GameThread(getHolder(), this, gameSpeed); // Pasar velocidad
