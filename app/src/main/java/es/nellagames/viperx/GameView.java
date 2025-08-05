@@ -5,6 +5,7 @@ import android.graphics.*;
 import android.media.SoundPool;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -72,6 +73,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         super(context, attrs);
         getHolder().addCallback(this);
         thread = new GameThread(getHolder(), this, gameSpeed); // Pasar la velocidad al hilo
+
+        // Hacer la vista focusable para recibir eventos de teclado
+        setFocusable(true);
+        setFocusableInTouchMode(true);
 
         try {
             soundPool = new SoundPool.Builder().setMaxStreams(4).build();
@@ -455,7 +460,52 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (gameOver) {
+            // Reiniciar con cualquier tecla cuando está en game over
+            if (keyCode == KeyEvent.KEYCODE_SPACE || keyCode == KeyEvent.KEYCODE_ENTER ||
+                    keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+                    keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                restartGame();
+                return true;
+            }
+        } else {
+            // Control de dirección con teclas de flecha
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_DPAD_UP:
+                case KeyEvent.KEYCODE_W:
+                    pendingDirection = Direction.UP;
+                    Log.d("GameView", "Key UP pressed");
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_DOWN:
+                case KeyEvent.KEYCODE_S:
+                    pendingDirection = Direction.DOWN;
+                    Log.d("GameView", "Key DOWN pressed");
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_LEFT:
+                case KeyEvent.KEYCODE_A:
+                    pendingDirection = Direction.LEFT;
+                    Log.d("GameView", "Key LEFT pressed");
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                case KeyEvent.KEYCODE_D:
+                    pendingDirection = Direction.RIGHT;
+                    Log.d("GameView", "Key RIGHT pressed");
+                    return true;
+                case KeyEvent.KEYCODE_SPACE:
+                case KeyEvent.KEYCODE_ENTER:
+                    // Pausa/resume (opcional)
+                    return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        // Solicitar foco para recibir eventos de teclado
+        requestFocus();
+
         if (thread != null && !thread.isRunning()) {
             thread.setRunning(true);
             try { thread.start(); }
