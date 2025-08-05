@@ -9,7 +9,7 @@ public class GameThread extends Thread {
     private final GameView gameView;
     private boolean running = false;
 
-    public GameThread(SurfaceHolder surfaceHolder, GameView gameView) {
+    public GameThread(SurfaceHolder surfaceHolder, GameView gameView, long gameSpeed) {
         this.surfaceHolder = surfaceHolder;
         this.gameView = gameView;
     }

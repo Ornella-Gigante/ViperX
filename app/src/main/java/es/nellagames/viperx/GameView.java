@@ -29,6 +29,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     private int bonusValue = 5;
 
+    // Velocidad del juego más lenta para dar tiempo a los cálculos
+    private final long gameSpeed = 800; // Milisegundos entre movimientos (más alto = más lento)
+
     // TextViews para mostrar información
     private TextView questionTextView;
     private TextView scoreTextView;
@@ -68,7 +71,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
         getHolder().addCallback(this);
-        thread = new GameThread(getHolder(), this);
+        thread = new GameThread(getHolder(), this, gameSpeed); // Pasar la velocidad al hilo
 
         try {
             soundPool = new SoundPool.Builder().setMaxStreams(4).build();
@@ -412,7 +415,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             thread.setRunning(true);
             try { thread.start(); }
             catch (IllegalThreadStateException e) {
-                thread = new GameThread(getHolder(), this);
+                thread = new GameThread(getHolder(), this, gameSpeed); // Pasar velocidad
                 thread.setRunning(true);
                 thread.start();
             }
@@ -433,7 +436,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     }
     public void resume() {
         if (thread != null && !thread.isRunning()) {
-            thread = new GameThread(getHolder(), this);
+            thread = new GameThread(getHolder(), this, gameSpeed); // Pasar velocidad
             thread.setRunning(true);
             try { thread.start(); }
             catch (IllegalThreadStateException e) {}
