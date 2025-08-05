@@ -430,6 +430,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 float dx = event.getX() - startX;
                 float dy = event.getY() - startY;
 
+                // Añadir umbral mínimo para detectar swipes válidos
+                float minSwipeDistance = 50f;
+
+                if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) {
+                    // Movimiento muy pequeño, ignorar
+                    break;
+                }
+
                 // Determinar dirección basada en el movimiento más grande
                 if (Math.abs(dx) > Math.abs(dy)) {
                     // Movimiento horizontal
@@ -438,6 +446,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     // Movimiento vertical
                     pendingDirection = dy > 0 ? Direction.DOWN : Direction.UP;
                 }
+
+                // Debug log para verificar detección de direcciones
+                Log.d("GameView", "Swipe detected: dx=" + dx + ", dy=" + dy + ", direction=" + pendingDirection);
                 break;
         }
         return true;
