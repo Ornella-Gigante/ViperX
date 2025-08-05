@@ -361,28 +361,44 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         snake.add(0, head);
 
         // COLISIONES
+        boolean foodEaten = false;
+
         if (correctFood != null && head.equals(correctFood.position)) {
             score++;
             if (soundPool != null) soundPool.play(correctSound, 1.0f, 1.0f, 0, 0, 1.0f);
             spawnQuizAndFoods();
             updateTextViews();
-            return;
-        }
-        for (FoodItem f : wrongFoods) {
-            if (head.equals(f.position)) {
-                if (soundPool != null) soundPool.play(errorSound, 1.0f, 1.0f, 0, 0, 1.0f);
-                gameOver = true;
-                return;
+            foodEaten = true; // La serpiente crece
+        } else {
+            // Verificar colisión con comida incorrecta
+            for (FoodItem f : wrongFoods) {
+                if (head.equals(f.position)) {
+                    if (soundPool != null) soundPool.play(errorSound, 1.0f, 1.0f, 0, 0, 1.0f);
+                    // La serpiente se hace más pequeña (pierde 1 segmento extra)
+                    if (snake.size() > 2) { // Asegurar que la serpiente tenga al menos 2 segmentos
+                        snake.remove(snake.size() - 1); // Quitar un segmento extra como penalización
+                    }
+                    spawnQuizAndFoods(); // Generar nueva pregunta después del error
+                    updateTextViews();
+                    foodEaten = true; // No crecer, pero tampoco decrecer normalmente
+                    break;
+                }
+            }
+
+            // Verificar comida bonus
+            if (bonusFood != null && head.equals(bonusFood.position)) {
+                score += bonusValue;
+                if (soundPool != null) soundPool.play(bonusSound, 1.0f, 1.0f, 0, 0, 1.0f);
+                bonusFood = null;
+                updateTextViews();
+                foodEaten = true; // La serpiente crece
             }
         }
-        if (bonusFood != null && head.equals(bonusFood.position)) {
-            score += bonusValue;
-            if (soundPool != null) soundPool.play(bonusSound, 1.0f, 1.0f, 0, 0, 1.0f);
-            bonusFood = null;
-            updateTextViews();
-            return;
+
+        // Solo quitar la cola si no comió nada (movimiento normal)
+        if (!foodEaten) {
+            snake.remove(snake.size() - 1);
         }
-        snake.remove(snake.size() - 1);
     }
 
     @Override
