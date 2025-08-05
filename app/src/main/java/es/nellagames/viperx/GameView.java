@@ -84,6 +84,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             errorSound = soundPool.load(context, R.raw.error, 1);
             bonusSound = soundPool.load(context, R.raw.bonus, 1);
             loseSound = soundPool.load(context, R.raw.lose, 1);
+
+            // Log para verificar que los sonidos se cargaron correctamente
+            Log.d("GameView", "Sounds loaded - correct: " + correctSound + ", error: " + errorSound +
+                    ", bonus: " + bonusSound + ", lose: " + loseSound);
         } catch (Exception e) {
             Log.e("GameView", "Error loading sounds: " + e.getMessage());
         }
@@ -150,6 +154,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         snake.clear();
         snake.add(new Point(4, 5));
         snake.add(new Point(3, 5));
+        snake.add(new Point(2, 5));
+        snake.add(new Point(1, 5));
         direction = Direction.RIGHT;
         pendingDirection = null;
         score = 0;
@@ -242,22 +248,23 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
-        // Dibujar cuadrícula - Líneas verticales
+        // --- DIBUJAR CUADRÍCULA ---
         Paint gridPaint = new Paint();
-        gridPaint.setColor(Color.BLACK);
-        gridPaint.setStrokeWidth(2);
+        gridPaint.setColor(Color.BLACK); // Puedes elegir el color que quieras
+        gridPaint.setStrokeWidth(2);     // Grosor de línea de 2px
 
-        // Líneas verticales (de arriba a abajo)
+// Líneas verticales (de arriba a abajo)
         for (int i = 0; i <= gridCols; i++) {
             int x = offsetX + i * cellSizeDynamic;
             canvas.drawLine(x, offsetY, x, offsetY + gridHeight, gridPaint);
         }
 
-        // Líneas horizontales (de izquierda a derecha)
+// Líneas horizontales (de izquierda a derecha)
         for (int i = 0; i <= gridRows; i++) {
             int y = offsetY + i * cellSizeDynamic;
             canvas.drawLine(offsetX, y, offsetX + gridWidth, y, gridPaint);
         }
+
 
         // DIBUJAR SERPIENTE
         if (snake != null && !snake.isEmpty()) {
@@ -378,6 +385,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         // COLISIONES CON ALIMENTOS
         boolean foodEaten = false;
+        boolean wrongFoodEaten = false;
 
         // Verificar comida correcta
         if (correctFood != null && head.equals(correctFood.position)) {
@@ -386,35 +394,54 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             spawnQuizAndFoods();
             updateTextViews();
             foodEaten = true; // La serpiente crece
-        } else {
-            // Verificar colisión con comida incorrecta
+        }
+
+        // Verificar colisión con comida incorrecta
+        if (!foodEaten) { // Solo verificar si no comió la correcta
             for (FoodItem f : wrongFoods) {
                 if (head.equals(f.position)) {
-                    // Reproducir sonido de error específicamente
-                    if (soundPool != null) soundPool.play(errorSound, 1.0f, 1.0f, 0, 0, 1.0f);
-                    // La serpiente se hace más pequeña (pierde 1 segmento extra)
-                    if (snake.size() > 2) { // Asegurar que la serpiente tenga al menos 2 segmentos
-                        snake.remove(snake.size() - 1); // Quitar un segmento extra como penalización
+                    // Reproducir sonido de error específicamente con logging
+                    Log.d("GameView", "Wrong food eaten! Playing error sound");
+                    if (soundPool != null && errorSound != 0) {
+                        int streamId = soundPool.play(errorSound, 1.0f, 1.0f, 1, 0, 1.0f);
+                        Log.d("GameView", "Error sound played with streamId: " + streamId);
+                    } else {
+                        Log.e("GameView", "Cannot play error sound - soundPool: " + soundPool + ", errorSound: " + errorSound);
                     }
+
+                    wrongFoodEaten = true;
                     spawnQuizAndFoods(); // Generar nueva pregunta después del error
                     updateTextViews();
-                    foodEaten = true; // No crecer, pero tampoco decrecer normalmente
                     break;
                 }
             }
-
-            // Verificar comida bonus
-            if (bonusFood != null && head.equals(bonusFood.position)) {
-                score += bonusValue;
-                if (soundPool != null) soundPool.play(bonusSound, 1.0f, 1.0f, 0, 0, 1.0f);
-                bonusFood = null;
-                updateTextViews();
-                foodEaten = true; // La serpiente crece
-            }
         }
 
-        // Solo quitar la cola si no comió nada (movimiento normal)
-        if (!foodEaten) {
+        // Verificar comida bonus
+        if (!foodEaten && !wrongFoodEaten && bonusFood != null && head.equals(bonusFood.position)) {
+            score += bonusValue;
+            if (soundPool != null) soundPool.play(bonusSound, 1.0f, 1.0f, 0, 0, 1.0f);
+            bonusFood = null;
+            updateTextViews();
+            foodEaten = true; // La serpiente crece
+        }
+
+        // Manejar el tamaño de la serpiente según lo que comió
+        if (wrongFoodEaten) {
+            // Comió alimento incorrecto: la serpiente se hace más pequeña
+            // Quitar la cola normalmente Y un segmento adicional como castigo
+            if (snake.size() > 1) {
+                snake.remove(snake.size() - 1); // Quitar cola normal
+            }
+            if (snake.size() > 1) {
+                snake.remove(snake.size() - 1); // Quitar segmento adicional como castigo
+                Log.d("GameView", "Snake shrunk due to wrong food. New size: " + snake.size());
+            }
+        } else if (foodEaten) {
+            // Comió alimento correcto o bonus: la serpiente crece (no quitar cola)
+            // No hacer nada, la serpiente mantiene todos sus segmentos
+        } else {
+            // Movimiento normal sin comer nada: quitar la cola
             snake.remove(snake.size() - 1);
         }
     }
