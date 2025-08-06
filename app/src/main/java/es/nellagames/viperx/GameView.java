@@ -144,7 +144,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
 
             // NUEVO: Cargar imagen de fondo de cuadrícula
-            gridBackground = BitmapFactory.decodeResource(getResources(), R.drawable.cu);
+            gridBackground = BitmapFactory.decodeResource(getResources(), R.drawable.cuadricula);
 
             foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
             Log.d("GameView", "Bitmaps loaded successfully");
