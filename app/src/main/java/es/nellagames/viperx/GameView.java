@@ -49,6 +49,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap apple, candy, sushi1, sushi2;
     private Bitmap[] foodBitmaps;
 
+    // NUEVO: Imagen de fondo de la cuadrícula
+    private Bitmap gridBackground;
+
     // NUEVOS: sistema de foods correctos/incorrectos
     private class FoodItem {
         Point position;
@@ -140,6 +143,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             sushi1 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi1);
             sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
 
+            // NUEVO: Cargar imagen de fondo de cuadrícula
+            gridBackground = BitmapFactory.decodeResource(getResources(), R.drawable.cuadricula);
+
             foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
             Log.d("GameView", "Bitmaps loaded successfully");
         } catch (Exception e) {
@@ -178,6 +184,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         tail_up = tail_down = tail_left = tail_right = createColorBitmap(size, Color.CYAN);
         apple = candy = sushi1 = sushi2 = createColorBitmap(size, Color.RED);
         foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
+
+        // NUEVO: Crear imagen de cuadrícula de respaldo
+        gridBackground = createGridFallback(700, Color.rgb(198, 255, 198), Color.BLACK);
     }
 
     private Bitmap createColorBitmap(int size, int color) {
@@ -186,6 +195,38 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         Paint paint = new Paint();
         paint.setColor(color);
         canvas.drawRect(0, 0, size, size, paint);
+        return bitmap;
+    }
+
+    // NUEVO: Crear imagen de cuadrícula de respaldo
+    private Bitmap createGridFallback(int size, int backgroundColor, int lineColor) {
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        // Fondo
+        Paint bgPaint = new Paint();
+        bgPaint.setColor(backgroundColor);
+        canvas.drawRect(0, 0, size, size, bgPaint);
+
+        // Líneas de cuadrícula
+        Paint gridPaint = new Paint();
+        gridPaint.setColor(lineColor);
+        gridPaint.setStrokeWidth(2);
+
+        int cellSize = size / numCells;
+
+        // Líneas verticales
+        for (int i = 0; i <= numCells; i++) {
+            int x = i * cellSize;
+            canvas.drawLine(x, 0, x, size, gridPaint);
+        }
+
+        // Líneas horizontales
+        for (int i = 0; i <= numCells; i++) {
+            int y = i * cellSize;
+            canvas.drawLine(0, y, size, y, gridPaint);
+        }
+
         return bitmap;
     }
 
@@ -287,34 +328,39 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         int offsetX = (canvas.getWidth() - gridWidth) / 2;
         int offsetY = (canvas.getHeight() - gridHeight) / 2;
 
-        // Dibujar fondo verde para cada celda de la cuadrícula
-        Paint cellPaint = new Paint();
-        cellPaint.setColor(Color.rgb(198, 255, 198));
-        for (int row = 0; row < gridRows; row++) {
-            for (int col = 0; col < gridCols; col++) {
-                int x = offsetX + col * cellSizeDynamic;
-                int y = offsetY + row * cellSizeDynamic;
-                canvas.drawRect(x, y, x + cellSizeDynamic, y + cellSizeDynamic, cellPaint);
+        // NUEVO: Dibujar imagen de fondo de cuadrícula en lugar del fondo verde y líneas
+        if (gridBackground != null) {
+            Bitmap scaledGrid = Bitmap.createScaledBitmap(gridBackground, gridWidth, gridHeight, false);
+            canvas.drawBitmap(scaledGrid, offsetX, offsetY, null);
+        } else {
+            // Fallback: Dibujar fondo verde para cada celda de la cuadrícula
+            Paint cellPaint = new Paint();
+            cellPaint.setColor(Color.rgb(198, 255, 198));
+            for (int row = 0; row < gridRows; row++) {
+                for (int col = 0; col < gridCols; col++) {
+                    int x = offsetX + col * cellSizeDynamic;
+                    int y = offsetY + row * cellSizeDynamic;
+                    canvas.drawRect(x, y, x + cellSizeDynamic, y + cellSizeDynamic, cellPaint);
+                }
+            }
+
+            // Fallback: Dibujar líneas de cuadrícula
+            Paint gridPaint = new Paint();
+            gridPaint.setColor(Color.BLACK);
+            gridPaint.setStrokeWidth(2);
+
+            // Líneas verticales
+            for (int i = 0; i <= gridCols; i++) {
+                int x = offsetX + i * cellSizeDynamic;
+                canvas.drawLine(x, offsetY, x, offsetY + gridHeight, gridPaint);
+            }
+
+            // Líneas horizontales
+            for (int i = 0; i <= gridRows; i++) {
+                int y = offsetY + i * cellSizeDynamic;
+                canvas.drawLine(offsetX, y, offsetX + gridWidth, y, gridPaint);
             }
         }
-
-        // --- DIBUJAR CUADRÍCULA ---
-        Paint gridPaint = new Paint();
-        gridPaint.setColor(Color.BLACK); // Puedes elegir el color que quieras
-        gridPaint.setStrokeWidth(2);     // Grosor de línea de 2px
-
-// Líneas verticales (de arriba a abajo)
-        for (int i = 0; i <= gridCols; i++) {
-            int x = offsetX + i * cellSizeDynamic;
-            canvas.drawLine(x, offsetY, x, offsetY + gridHeight, gridPaint);
-        }
-
-// Líneas horizontales (de izquierda a derecha)
-        for (int i = 0; i <= gridRows; i++) {
-            int y = offsetY + i * cellSizeDynamic;
-            canvas.drawLine(offsetX, y, offsetX + gridWidth, y, gridPaint);
-        }
-
 
         // DIBUJAR SERPIENTE
         if (snake != null && !snake.isEmpty()) {
