@@ -37,9 +37,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private TextView questionTextView;
     private TextView scoreTextView;
 
-    // SONIDOS
+    // SONIDOS - Añadido flag para verificar que los sonidos están listos
     private SoundPool soundPool;
     private int correctSound, errorSound, bonusSound, loseSound;
+    private boolean soundsLoaded = false;
 
     // Sprites
     private Bitmap head_up, head_down, head_left, head_right;
@@ -78,20 +79,47 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         setFocusable(true);
         setFocusableInTouchMode(true);
 
+        initializeSounds(context);
+        initializeBitmaps();
+
+        // Inicializar el juego DESPUÉS de cargar los bitmaps
+        restartGame();
+    }
+
+    private void initializeSounds(Context context) {
         try {
-            soundPool = new SoundPool.Builder().setMaxStreams(4).build();
+            soundPool = new SoundPool.Builder()
+                    .setMaxStreams(5)  // Aumentado para más streams simultáneos
+                    .build();
+
+            // Cargar sonidos con verificación
             correctSound = soundPool.load(context, R.raw.correct, 1);
             errorSound = soundPool.load(context, R.raw.error, 1);
             bonusSound = soundPool.load(context, R.raw.bonus, 1);
             loseSound = soundPool.load(context, R.raw.lose, 1);
 
-            // Log para verificar que los sonidos se cargaron correctamente
-            Log.d("GameView", "Sounds loaded - correct: " + correctSound + ", error: " + errorSound +
+            // Listener para verificar cuando los sonidos están cargados
+            soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+                @Override
+                public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
+                    if (status == 0) { // 0 means success
+                        soundsLoaded = true;
+                        Log.d("GameView", "Sound loaded successfully - ID: " + sampleId);
+                    } else {
+                        Log.e("GameView", "Failed to load sound - ID: " + sampleId + ", Status: " + status);
+                    }
+                }
+            });
+
+            Log.d("GameView", "Sounds initialized - correct: " + correctSound + ", error: " + errorSound +
                     ", bonus: " + bonusSound + ", lose: " + loseSound);
         } catch (Exception e) {
-            Log.e("GameView", "Error loading sounds: " + e.getMessage());
+            Log.e("GameView", "Error initializing sounds: " + e.getMessage());
+            soundPool = null;
         }
+    }
 
+    private void initializeBitmaps() {
         try {
             head_up = BitmapFactory.decodeResource(getResources(), R.drawable.head_up);
             head_down = BitmapFactory.decodeResource(getResources(), R.drawable.head_down);
@@ -113,12 +141,34 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
 
             foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
+            Log.d("GameView", "Bitmaps loaded successfully");
         } catch (Exception e) {
+            Log.e("GameView", "Error loading bitmaps: " + e.getMessage());
             createFallbackBitmaps();
         }
+    }
 
-        // Inicializar el juego DESPUÉS de cargar los bitmaps
-        restartGame();
+    // Método mejorado para reproducir sonidos
+    private void playSound(int soundId, String soundName) {
+        if (soundPool != null && soundId > 0) {
+            try {
+                float volume = 1.0f;
+                int priority = 1;
+                int loop = 0;
+                float rate = 1.0f;
+
+                int streamId = soundPool.play(soundId, volume, volume, priority, loop, rate);
+                Log.d("GameView", soundName + " sound played - StreamID: " + streamId + ", SoundID: " + soundId);
+
+                if (streamId == 0) {
+                    Log.e("GameView", "Failed to play " + soundName + " sound - StreamID is 0");
+                }
+            } catch (Exception e) {
+                Log.e("GameView", "Exception playing " + soundName + " sound: " + e.getMessage());
+            }
+        } else {
+            Log.e("GameView", "Cannot play " + soundName + " - soundPool: " + soundPool + ", soundId: " + soundId);
+        }
     }
 
     private void createFallbackBitmaps() {
@@ -376,7 +426,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         // Verificar colisiones con paredes o consigo misma
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
-            if (soundPool != null) soundPool.play(loseSound, 1.0f, 1.0f, 0, 0, 1.0f);
+            playSound(loseSound, "lose");
             return;
         }
 
@@ -390,7 +440,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         // Verificar comida correcta
         if (correctFood != null && head.equals(correctFood.position)) {
             score++;
-            if (soundPool != null) soundPool.play(correctSound, 1.0f, 1.0f, 0, 0, 1.0f);
+            playSound(correctSound, "correct");
             spawnQuizAndFoods();
             updateTextViews();
             foodEaten = true; // La serpiente crece
@@ -400,15 +450,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         if (!foodEaten) { // Solo verificar si no comió la correcta
             for (FoodItem f : wrongFoods) {
                 if (head.equals(f.position)) {
-                    // Reproducir sonido de error específicamente con logging
-                    Log.d("GameView", "Wrong food eaten! Playing error sound");
-                    if (soundPool != null && errorSound != 0) {
-                        int streamId = soundPool.play(errorSound, 1.0f, 1.0f, 1, 0, 1.0f);
-                        Log.d("GameView", "Error sound played with streamId: " + streamId);
-                    } else {
-                        Log.e("GameView", "Cannot play error sound - soundPool: " + soundPool + ", errorSound: " + errorSound);
-                    }
-
+                    Log.d("GameView", "Wrong food eaten! Value: " + f.value + ", Correct answer: " + correctAnswer);
+                    playSound(errorSound, "error");
                     wrongFoodEaten = true;
                     spawnQuizAndFoods(); // Generar nueva pregunta después del error
                     updateTextViews();
@@ -420,7 +463,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         // Verificar comida bonus
         if (!foodEaten && !wrongFoodEaten && bonusFood != null && head.equals(bonusFood.position)) {
             score += bonusValue;
-            if (soundPool != null) soundPool.play(bonusSound, 1.0f, 1.0f, 0, 0, 1.0f);
+            playSound(bonusSound, "bonus");
             bonusFood = null;
             updateTextViews();
             foodEaten = true; // La serpiente crece
@@ -552,6 +595,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         if (thread != null) {
             thread.setRunning(false);
             try { thread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
+        }
+
+        // Limpiar recursos de sonido
+        if (soundPool != null) {
+            soundPool.release();
+            soundPool = null;
         }
     }
 
