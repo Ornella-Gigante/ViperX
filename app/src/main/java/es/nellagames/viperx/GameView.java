@@ -436,85 +436,128 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             canvas.drawText("Tap to Restart", getWidth() / 2, getHeight() / 2 + 50, overPaint);
         }
     }
-
     private void drawFood(Canvas canvas, FoodItem food, int offsetX, int offsetY, int cellSize) {
         if (food == null) return;
 
         int x = offsetX + food.position.x * cellSize;
         int y = offsetY + food.position.y * cellSize;
 
-        // Make food larger - use almost the entire cell with minimal padding
-        int foodPadding = cellSize / 20; // Reduced padding for larger food
+        // Add subtle drop shadow for food items
+        Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        shadowPaint.setColor(Color.argb(60, 0, 0, 0));
+        shadowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.05f, BlurMaskFilter.Blur.NORMAL));
+
+        // Make food much larger with minimal padding
+        int foodPadding = cellSize / 30; // Even less padding for maximum size
         int foodSize = cellSize - (foodPadding * 2);
-        Bitmap scaledFood = Bitmap.createScaledBitmap(food.bitmap, foodSize, foodSize, false);
+
+        // Draw shadow slightly offset
+        int shadowOffset = cellSize / 40;
+        canvas.drawRoundRect(x + foodPadding + shadowOffset, y + foodPadding + shadowOffset,
+                x + foodPadding + foodSize + shadowOffset, y + foodPadding + foodSize + shadowOffset,
+                cellSize * 0.1f, cellSize * 0.1f, shadowPaint);
+
+        // Scale and draw the food bitmap
+        Bitmap scaledFood = Bitmap.createScaledBitmap(food.bitmap, foodSize, foodSize, true);
         canvas.drawBitmap(scaledFood, x + foodPadding, y + foodPadding, null);
 
-        // Enhanced number styling with neutral colors
+        // Add subtle overlay for better number contrast
+        Paint overlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        overlayPaint.setColor(Color.argb(30, 0, 0, 0));
+        canvas.drawRoundRect(x + foodPadding, y + foodPadding, x + foodPadding + foodSize, y + foodPadding + foodSize,
+                cellSize * 0.05f, cellSize * 0.05f, overlayPaint);
+
+        // Enhanced number styling with better positioning and size
         Paint numberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-        // Create background circle for the number - neutral colors only
-        Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        // Create semi-transparent background for better readability over food
+        Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         if (food == bonusFood) {
-            // Bonus food - special gold background
-            circlePaint.setColor(Color.argb(240, 255, 193, 7)); // Material Amber/Gold
+            // Bonus food - semi-transparent gold
+            bgPaint.setColor(Color.argb(200, 255, 193, 7)); // More transparent for overlay
         } else {
-            // All quiz foods get the same neutral dark blue background
-            circlePaint.setColor(Color.argb(240, 63, 81, 181)); // Material Indigo - neutral color
+            // Quiz foods - semi-transparent dark background
+            bgPaint.setColor(Color.argb(180, 33, 33, 33)); // Semi-transparent for overlay effect
         }
 
-        // Make number circle larger and better positioned
-        float circleRadius = cellSize * 0.22f; // Increased size
-        float centerX = x + cellSize * 0.8f; // Better positioning
-        float centerY = y + cellSize * 0.2f;
-        canvas.drawCircle(centerX, centerY, circleRadius, circlePaint);
+        // Center the number background within the food item
+        float bgWidth = cellSize * 0.4f;
+        float bgHeight = cellSize * 0.3f;
+        float bgX = x + (cellSize - bgWidth) / 2;  // Centered horizontally
+        float bgY = y + (cellSize - bgHeight) / 2; // Centered vertically
+        float cornerRadius = cellSize * 0.08f;
 
-        // Draw white border around circle
+        // Draw background with shadow
+        Paint bgShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bgShadowPaint.setColor(Color.argb(80, 0, 0, 0));
+        bgShadowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.02f, BlurMaskFilter.Blur.NORMAL));
+        canvas.drawRoundRect(bgX + 2, bgY + 2, bgX + bgWidth + 2, bgY + bgHeight + 2,
+                cornerRadius, cornerRadius, bgShadowPaint);
+
+        // Draw main background
+        canvas.drawRoundRect(bgX, bgY, bgX + bgWidth, bgY + bgHeight,
+                cornerRadius, cornerRadius, bgPaint);
+
+        // Add subtle border
         Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        borderPaint.setColor(Color.WHITE);
+        borderPaint.setColor(Color.argb(100, 255, 255, 255));
         borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(cellSize * 0.025f); // Slightly thicker border
-        canvas.drawCircle(centerX, centerY, circleRadius, borderPaint);
+        borderPaint.setStrokeWidth(cellSize * 0.015f);
+        canvas.drawRoundRect(bgX, bgY, bgX + bgWidth, bgY + bgHeight,
+                cornerRadius, cornerRadius, borderPaint);
 
-        // Configure number text - larger and clearer
+        // Configure number text with better contrast for overlay
         numberPaint.setColor(Color.WHITE);
-        numberPaint.setTextSize(cellSize * 0.3f); // Larger text
+        numberPaint.setTextSize(cellSize * 0.32f); // Slightly larger for better visibility
         numberPaint.setTextAlign(Paint.Align.CENTER);
         numberPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
 
-        // Add stronger shadow for better readability
-        numberPaint.setShadowLayer(3, 1, 1, Color.argb(200, 0, 0, 0));
+        // Stronger shadow for better readability over food images
+        numberPaint.setShadowLayer(6, 0, 3, Color.argb(200, 0, 0, 0));
 
-        // Draw the number
+        // Draw the number centered in background
         String numberText = String.valueOf(food.value);
+        float textCenterX = bgX + bgWidth / 2;
+        float textCenterY = bgY + bgHeight / 2;
+
         Paint.FontMetrics fm = numberPaint.getFontMetrics();
         float textHeight = fm.descent - fm.ascent;
-        float textY = centerY + (textHeight / 2) - fm.descent;
+        float textY = textCenterY + (textHeight / 2) - fm.descent;
 
-        canvas.drawText(numberText, centerX, textY, numberPaint);
+        canvas.drawText(numberText, textCenterX, textY, numberPaint);
 
-        // Add bonus indicator for bonus food only
+        // Enhanced bonus indicator
         if (food == bonusFood) {
             Paint bonusPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            bonusPaint.setColor(Color.argb(255, 255, 215, 0)); // Gold color
-            bonusPaint.setTextSize(cellSize * 0.18f); // Larger bonus text
+            bonusPaint.setColor(Color.argb(255, 255, 215, 0));
+            bonusPaint.setTextSize(cellSize * 0.15f);
             bonusPaint.setTextAlign(Paint.Align.CENTER);
             bonusPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-            bonusPaint.setShadowLayer(2, 1, 1, Color.BLACK);
+            bonusPaint.setShadowLayer(3, 1, 1, Color.argb(200, 0, 0, 0));
 
-            // Draw "BONUS" text below the food
-            canvas.drawText("BONUS", x + cellSize / 2, y + cellSize - (cellSize * 0.02f), bonusPaint);
+            // Draw "BONUS" with background
+            String bonusText = "BONUS";
+            float bonusTextWidth = bonusPaint.measureText(bonusText);
+            float bonusBgX = x + (cellSize - bonusTextWidth) / 2 - cellSize * 0.05f;
+            float bonusBgY = y + cellSize - cellSize * 0.25f;
+
+            Paint bonusBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bonusBgPaint.setColor(Color.argb(200, 0, 0, 0));
+            canvas.drawRoundRect(bonusBgX, bonusBgY, bonusBgX + bonusTextWidth + cellSize * 0.1f,
+                    bonusBgY + cellSize * 0.2f, cellSize * 0.03f, cellSize * 0.03f, bonusBgPaint);
+
+            canvas.drawText(bonusText, x + cellSize / 2, y + cellSize - cellSize * 0.08f, bonusPaint);
         }
 
-        // Add subtle neutral glow effect for all foods (not revealing correct answers)
-        Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        if (food == bonusFood) {
-            glowPaint.setColor(Color.argb(40, 255, 193, 7)); // Gold glow for bonus
-        } else {
-            glowPaint.setColor(Color.argb(30, 63, 81, 181)); // Neutral glow for all quiz foods
-        }
-        glowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.08f, BlurMaskFilter.Blur.OUTER));
-        canvas.drawCircle(centerX, centerY, circleRadius + (cellSize * 0.03f), glowPaint);
+        // Add modern highlight effect on food edges
+        Paint highlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        highlightPaint.setColor(Color.argb(40, 255, 255, 255));
+        highlightPaint.setStyle(Paint.Style.STROKE);
+        highlightPaint.setStrokeWidth(cellSize * 0.02f);
+        canvas.drawRoundRect(x + foodPadding, y + foodPadding, x + foodPadding + foodSize, y + foodPadding + foodSize,
+                cellSize * 0.05f, cellSize * 0.05f, highlightPaint);
     }
+
 
     public void update() {
         if (gameOver) return;
