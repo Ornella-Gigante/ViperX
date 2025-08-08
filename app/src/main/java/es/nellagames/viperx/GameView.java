@@ -29,13 +29,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private float startX, startY;
 
     private int bonusValue = 5;
-    private final long gameSpeed = 1200;
+
+    // Velocidad del juego más lenta para dar tiempo a los cálculos
+    private final long gameSpeed = 1200; // Milisegundos entre movimientos (más lento para mejor gameplay)
 
     // TextViews para mostrar información
     private TextView questionTextView;
     private TextView scoreTextView;
 
-    // SONIDOS
+    // SONIDOS - Añadido flag para verificar que los sonidos están listos
     private SoundPool soundPool;
     private int correctSound, errorSound, bonusSound, loseSound;
     private boolean soundsLoaded = false;
@@ -46,12 +48,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap tail_up, tail_down, tail_left, tail_right;
     private Bitmap apple, candy, sushi1, sushi2;
     private Bitmap[] foodBitmaps;
+
+    // NUEVO: Imagen de fondo de la cuadrícula
     private Bitmap gridBackground;
 
     // NUEVOS: sistema de foods correctos/incorrectos
     private class FoodItem {
         Point position;
-        int value;
+        int value;        // Número mostrado
         boolean isCorrect;
         Bitmap bitmap;
         FoodItem(Point position, int value, boolean isCorrect, Bitmap bitmap) {
@@ -72,30 +76,46 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
         getHolder().addCallback(this);
-        thread = new GameThread(getHolder(), this, gameSpeed);
+        thread = new GameThread(getHolder(), this, gameSpeed); // Pasar la velocidad al hilo
+
+        // Hacer la vista focusable para recibir eventos de teclado
         setFocusable(true);
         setFocusableInTouchMode(true);
+
         initializeSounds(context);
         initializeBitmaps();
+
+        // Inicializar el juego DESPUÉS de cargar los bitmaps
         restartGame();
     }
 
     private void initializeSounds(Context context) {
         try {
-            soundPool = new SoundPool.Builder().setMaxStreams(5).build();
+            soundPool = new SoundPool.Builder()
+                    .setMaxStreams(5)  // Aumentado para más streams simultáneos
+                    .build();
+
+            // Cargar sonidos con verificación
             correctSound = soundPool.load(context, R.raw.correct, 1);
             errorSound = soundPool.load(context, R.raw.error, 1);
             bonusSound = soundPool.load(context, R.raw.bonus, 1);
             loseSound = soundPool.load(context, R.raw.lose, 1);
+
+            // Listener para verificar cuando los sonidos están cargados
             soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
                 @Override
                 public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
-                    if (status == 0) {
+                    if (status == 0) { // 0 means success
                         soundsLoaded = true;
                         Log.d("GameView", "Sound loaded successfully - ID: " + sampleId);
+                    } else {
+                        Log.e("GameView", "Failed to load sound - ID: " + sampleId + ", Status: " + status);
                     }
                 }
             });
+
+            Log.d("GameView", "Sounds initialized - correct: " + correctSound + ", error: " + errorSound +
+                    ", bonus: " + bonusSound + ", lose: " + loseSound);
         } catch (Exception e) {
             Log.e("GameView", "Error initializing sounds: " + e.getMessage());
             soundPool = null;
@@ -122,20 +142,38 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             candy = BitmapFactory.decodeResource(getResources(), R.drawable.candy);
             sushi1 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi1);
             sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
+
+            // NUEVO: Cargar imagen de fondo de cuadrícula
             gridBackground = BitmapFactory.decodeResource(getResources(), R.drawable.cuadricula);
+
             foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
+            Log.d("GameView", "Bitmaps loaded successfully");
         } catch (Exception e) {
+            Log.e("GameView", "Error loading bitmaps: " + e.getMessage());
             createFallbackBitmaps();
         }
     }
 
+    // Método mejorado para reproducir sonidos
     private void playSound(int soundId, String soundName) {
         if (soundPool != null && soundId > 0) {
             try {
-                soundPool.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f);
+                float volume = 1.0f;
+                int priority = 1;
+                int loop = 0;
+                float rate = 1.0f;
+
+                int streamId = soundPool.play(soundId, volume, volume, priority, loop, rate);
+                Log.d("GameView", soundName + " sound played - StreamID: " + streamId + ", SoundID: " + soundId);
+
+                if (streamId == 0) {
+                    Log.e("GameView", "Failed to play " + soundName + " sound - StreamID is 0");
+                }
             } catch (Exception e) {
                 Log.e("GameView", "Exception playing " + soundName + " sound: " + e.getMessage());
             }
+        } else {
+            Log.e("GameView", "Cannot play " + soundName + " - soundPool: " + soundPool + ", soundId: " + soundId);
         }
     }
 
@@ -146,6 +184,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         tail_up = tail_down = tail_left = tail_right = createColorBitmap(size, Color.CYAN);
         apple = candy = sushi1 = sushi2 = createColorBitmap(size, Color.RED);
         foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
+
+        // NUEVO: Crear imagen de cuadrícula de respaldo
         gridBackground = createGridFallback(700, Color.rgb(198, 255, 198), Color.BLACK);
     }
 
@@ -158,24 +198,35 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         return bitmap;
     }
 
+    // NUEVO: Crear imagen de cuadrícula de respaldo
     private Bitmap createGridFallback(int size, int backgroundColor, int lineColor) {
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
+
+        // Fondo
         Paint bgPaint = new Paint();
         bgPaint.setColor(backgroundColor);
         canvas.drawRect(0, 0, size, size, bgPaint);
+
+        // Líneas de cuadrícula
         Paint gridPaint = new Paint();
         gridPaint.setColor(lineColor);
         gridPaint.setStrokeWidth(2);
+
         int cellSize = size / numCells;
+
+        // Líneas verticales
         for (int i = 0; i <= numCells; i++) {
             int x = i * cellSize;
             canvas.drawLine(x, 0, x, size, gridPaint);
         }
+
+        // Líneas horizontales
         for (int i = 0; i <= numCells; i++) {
             int y = i * cellSize;
             canvas.drawLine(0, y, size, y, gridPaint);
         }
+
         return bitmap;
     }
 
@@ -211,12 +262,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         operation = rand.nextBoolean() ? "+" : "-";
         correctAnswer = operation.equals("+") ? questionA + questionB : questionA - questionB;
 
+        // Verificar que foodBitmaps no sea null
         if (foodBitmaps == null || foodBitmaps.length == 0) {
+            Log.e("GameView", "foodBitmaps is null or empty, creating fallback bitmaps");
             createFallbackBitmaps();
         }
 
+        // Generar posición comestible correcta
         correctFood = new FoodItem(getRandomFreePoint(), correctAnswer, true, foodBitmaps[Math.abs(correctAnswer) % foodBitmaps.length]);
 
+        // Dos alimentos erróneos
         wrongFoods.clear();
         for (int i = 0; i < 2; i++) {
             int wrongVal;
@@ -226,6 +281,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             wrongFoods.add(new FoodItem(getRandomFreePoint(), wrongVal, false, foodBitmaps[Math.abs(wrongVal) % foodBitmaps.length]));
         }
 
+        // Bonus aleatorio
         if (rand.nextInt(5) == 0) {
             bonusFood = new FoodItem(getRandomFreePoint(), bonusValue, true, foodBitmaps[rand.nextInt(foodBitmaps.length)]);
         } else {
@@ -259,8 +315,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         super.draw(canvas);
         if (canvas == null) return;
 
+        // Limpiar canvas con fondo negro
         canvas.drawColor(Color.BLACK);
 
+        // Calcular dimensiones de la cuadrícula
         int gridRows = numCells, gridCols = numCells;
         int availableWidth = canvas.getWidth() - 32;
         int availableHeight = canvas.getHeight() - 16;
@@ -270,11 +328,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         int offsetX = (canvas.getWidth() - gridWidth) / 2;
         int offsetY = (canvas.getHeight() - gridHeight) / 2;
 
+        // NUEVO: Dibujar imagen de fondo de cuadrícula en lugar del fondo verde y líneas
         if (gridBackground != null) {
             Bitmap scaledGrid = Bitmap.createScaledBitmap(gridBackground, gridWidth, gridHeight, false);
             canvas.drawBitmap(scaledGrid, offsetX, offsetY, null);
         } else {
-            // Fallback grid drawing
+            // Fallback: Dibujar fondo verde para cada celda de la cuadrícula
             Paint cellPaint = new Paint();
             cellPaint.setColor(Color.rgb(198, 255, 198));
             for (int row = 0; row < gridRows; row++) {
@@ -283,6 +342,23 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     int y = offsetY + row * cellSizeDynamic;
                     canvas.drawRect(x, y, x + cellSizeDynamic, y + cellSizeDynamic, cellPaint);
                 }
+            }
+
+            // Fallback: Dibujar líneas de cuadrícula
+            Paint gridPaint = new Paint();
+            gridPaint.setColor(Color.BLACK);
+            gridPaint.setStrokeWidth(2);
+
+            // Líneas verticales
+            for (int i = 0; i <= gridCols; i++) {
+                int x = offsetX + i * cellSizeDynamic;
+                canvas.drawLine(x, offsetY, x, offsetY + gridHeight, gridPaint);
+            }
+
+            // Líneas horizontales
+            for (int i = 0; i <= gridRows; i++) {
+                int y = offsetY + i * cellSizeDynamic;
+                canvas.drawLine(offsetX, y, offsetX + gridWidth, y, gridPaint);
             }
         }
 
@@ -294,7 +370,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 int y = offsetY + segment.y * cellSizeDynamic;
 
                 Bitmap segmentBitmap;
+
                 if (i == 0) {
+                    // Cabeza de la serpiente
                     switch (direction) {
                         case UP: segmentBitmap = head_up; break;
                         case DOWN: segmentBitmap = head_down; break;
@@ -303,33 +381,45 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                         default: segmentBitmap = head_right; break;
                     }
                 } else if (i == snake.size() - 1) {
+                    // Cola de la serpiente
                     Point prev = snake.get(i - 1);
                     if (prev.x > segment.x) segmentBitmap = tail_right;
                     else if (prev.x < segment.x) segmentBitmap = tail_left;
                     else if (prev.y > segment.y) segmentBitmap = tail_down;
                     else segmentBitmap = tail_up;
                 } else {
+                    // Cuerpo de la serpiente
                     Point prev = snake.get(i - 1);
                     Point next = snake.get(i + 1);
-                    if (prev.x == next.x) segmentBitmap = body_vertical;
-                    else if (prev.y == next.y) segmentBitmap = body_horizontal;
-                    else if ((prev.x < segment.x && next.y < segment.y) || (next.x < segment.x && prev.y < segment.y))
-                        segmentBitmap = body_topleft;
-                    else if ((prev.x > segment.x && next.y < segment.y) || (next.x > segment.x && prev.y < segment.y))
-                        segmentBitmap = body_topright;
-                    else if ((prev.x < segment.x && next.y > segment.y) || (next.x < segment.x && prev.y > segment.y))
-                        segmentBitmap = body_bottomleft;
-                    else segmentBitmap = body_bottomright;
+
+                    if ((prev.x == next.x) || (prev.y == next.y)) {
+                        // Segmento recto
+                        if (prev.x == next.x) segmentBitmap = body_vertical;
+                        else segmentBitmap = body_horizontal;
+                    } else {
+                        // Segmento curvo
+                        if ((prev.x < segment.x && next.y < segment.y) || (next.x < segment.x && prev.y < segment.y)) {
+                            segmentBitmap = body_topleft;
+                        } else if ((prev.x > segment.x && next.y < segment.y) || (next.x > segment.x && prev.y < segment.y)) {
+                            segmentBitmap = body_topright;
+                        } else if ((prev.x < segment.x && next.y > segment.y) || (next.x < segment.x && prev.y > segment.y)) {
+                            segmentBitmap = body_bottomleft;
+                        } else {
+                            segmentBitmap = body_bottomright;
+                        }
+                    }
                 }
+
                 canvas.drawBitmap(Bitmap.createScaledBitmap(segmentBitmap, cellSizeDynamic, cellSizeDynamic, false), x, y, null);
             }
         }
 
-        // DIBUJAR ALIMENTOS con estética mejorada
-        drawFood(canvas, correctFood, offsetX, offsetY, cellSizeDynamic, true);
-        for (FoodItem wf : wrongFoods) drawFood(canvas, wf, offsetX, offsetY, cellSizeDynamic, false);
-        if (bonusFood != null) drawFood(canvas, bonusFood, offsetX, offsetY, cellSizeDynamic, true);
+        // DIBUJAR ALIMENTOS (quiz foods)
+        drawFood(canvas, correctFood, offsetX, offsetY, cellSizeDynamic);
+        for (FoodItem wf : wrongFoods) drawFood(canvas, wf, offsetX, offsetY, cellSizeDynamic);
+        if (bonusFood != null) drawFood(canvas, bonusFood, offsetX, offsetY, cellSizeDynamic);
 
+        // GAME OVER overlay
         if (gameOver) {
             Paint overlayPaint = new Paint();
             overlayPaint.setColor(Color.argb(180, 0, 0, 0));
@@ -343,116 +433,100 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             overPaint.setShadowLayer(4, 2, 2, Color.BLACK);
             canvas.drawText("GAME OVER", getWidth() / 2, getHeight() / 2 - 50, overPaint);
             overPaint.setTextSize(40f);
-            canvas.drawText("Tap to Restart", getWidth() / 2, getWidth() / 2 + 50, overPaint);
+            canvas.drawText("Tap to Restart", getWidth() / 2, getHeight() / 2 + 50, overPaint);
         }
     }
 
-    // MÉTODO MEJORADO para dibujar alimentos con mejor estética
-    private void drawFood(Canvas canvas, FoodItem food, int offsetX, int offsetY, int cellSize, boolean isCorrectOrBonus) {
+    private void drawFood(Canvas canvas, FoodItem food, int offsetX, int offsetY, int cellSize) {
         if (food == null) return;
 
         int x = offsetX + food.position.x * cellSize;
         int y = offsetY + food.position.y * cellSize;
 
-        // Dibujar el bitmap de comida con efecto de brillo sutil
-        Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        if (isCorrectOrBonus) {
-            // Añadir un ligero brillo dorado para respuestas correctas y bonus
-            bitmapPaint.setColorFilter(new ColorMatrixColorFilter(new ColorMatrix(new float[]{
-                    1.2f, 0.1f, 0.1f, 0, 20,    // Red
-                    0.1f, 1.2f, 0.1f, 0, 20,    // Green
-                    0.1f, 0.1f, 1.0f, 0, 10,    // Blue
-                    0, 0, 0, 1, 0               // Alpha
-            })));
-        }
-        canvas.drawBitmap(Bitmap.createScaledBitmap(food.bitmap, cellSize, cellSize, false), x, y, bitmapPaint);
+        // Draw food bitmap with slight padding for better visual appeal
+        int foodPadding = cellSize / 10;
+        int foodSize = cellSize - (foodPadding * 2);
+        Bitmap scaledFood = Bitmap.createScaledBitmap(food.bitmap, foodSize, foodSize, false);
+        canvas.drawBitmap(scaledFood, x + foodPadding, y + foodPadding, null);
 
-        // Crear fondo circular elegante para el número
-        int circleRadius = Math.min(cellSize / 3, 25);
-        int centerX = x + cellSize / 2;
-        int centerY = y + cellSize / 2;
+        // Enhanced number styling
+        Paint numberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-        // Fondo del círculo con gradiente
+        // Create background circle for the number
         Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        if (isCorrectOrBonus) {
-            // Respuesta correcta o bonus: verde brillante con gradiente
-            circlePaint.setShader(new RadialGradient(centerX, centerY, circleRadius,
-                    Color.argb(240, 76, 175, 80),   // Verde central
-                    Color.argb(200, 56, 142, 60),   // Verde más oscuro en borde
-                    Shader.TileMode.CLAMP));
+        if (food.isCorrect && food != bonusFood) {
+            // Correct answer - green background
+            circlePaint.setColor(Color.argb(220, 76, 175, 80)); // Material Green with transparency
+        } else if (!food.isCorrect) {
+            // Wrong answer - red background
+            circlePaint.setColor(Color.argb(220, 244, 67, 54)); // Material Red with transparency
         } else {
-            // Respuesta incorrecta: rojo elegante con gradiente
-            circlePaint.setShader(new RadialGradient(centerX, centerY, circleRadius,
-                    Color.argb(240, 244, 67, 54),   // Rojo central
-                    Color.argb(200, 183, 28, 28),   // Rojo más oscuro en borde
-                    Shader.TileMode.CLAMP));
+            // Bonus food - gold background
+            circlePaint.setColor(Color.argb(220, 255, 193, 7)); // Material Amber/Gold with transparency
         }
+
+        // Draw background circle
+        float circleRadius = cellSize * 0.18f;
+        float centerX = x + cellSize * 0.75f;
+        float centerY = y + cellSize * 0.25f;
         canvas.drawCircle(centerX, centerY, circleRadius, circlePaint);
 
-        // Borde del círculo con efecto brillante
+        // Draw white border around circle
         Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(3);
         borderPaint.setColor(Color.WHITE);
-        borderPaint.setShadowLayer(4, 0, 0, Color.argb(100, 255, 255, 255));
-        canvas.drawCircle(centerX, centerY, circleRadius - 1, borderPaint);
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setStrokeWidth(cellSize * 0.02f);
+        canvas.drawCircle(centerX, centerY, circleRadius, borderPaint);
 
-        // Texto del número con tipografía mejorada
-        Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(Math.max(16f, cellSize * 0.35f));
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        // Configure number text
+        numberPaint.setColor(Color.WHITE);
+        numberPaint.setTextSize(cellSize * 0.25f);
+        numberPaint.setTextAlign(Paint.Align.CENTER);
+        numberPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
 
-        // Sombra elegante para el texto
-        textPaint.setShadowLayer(3, 1, 1, Color.argb(150, 0, 0, 0));
+        // Add shadow for better readability
+        numberPaint.setShadowLayer(2, 1, 1, Color.argb(150, 0, 0, 0));
 
-        // Dibujar el número
+        // Draw the number
         String numberText = String.valueOf(food.value);
+        Paint.FontMetrics fm = numberPaint.getFontMetrics();
+        float textHeight = fm.descent - fm.ascent;
+        float textY = centerY + (textHeight / 2) - fm.descent;
+
+        canvas.drawText(numberText, centerX, textY, numberPaint);
+
+        // Add bonus indicator for bonus food
         if (food == bonusFood) {
-            numberText = "+" + food.value;
+            Paint bonusPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bonusPaint.setColor(Color.argb(255, 255, 215, 0)); // Gold color
+            bonusPaint.setTextSize(cellSize * 0.15f);
+            bonusPaint.setTextAlign(Paint.Align.CENTER);
+            bonusPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            bonusPaint.setShadowLayer(2, 1, 1, Color.BLACK);
+
+            // Draw "BONUS" text below the food
+            canvas.drawText("BONUS", x + cellSize / 2, y + cellSize - (cellSize * 0.05f), bonusPaint);
         }
 
-        // Calcular posición Y para centrar el texto verticalmente
-        Rect textBounds = new Rect();
-        textPaint.getTextBounds(numberText, 0, numberText.length(), textBounds);
-        float textY = centerY + textBounds.height() / 2f;
-
-        canvas.drawText(numberText, centerX, textY, textPaint);
-
-        // Efecto de partículas brillantes para bonus
-        if (food == bonusFood) {
-            drawSparkleEffect(canvas, centerX, centerY, cellSize);
-        }
-    }
-
-    // Efecto de partículas brillantes para bonus
-    private void drawSparkleEffect(Canvas canvas, int centerX, int centerY, int cellSize) {
-        Paint sparklePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        sparklePaint.setColor(Color.argb(180, 255, 215, 0));
-        sparklePaint.setStyle(Paint.Style.FILL);
-
-        int sparkleRadius = cellSize / 2;
-        Random sparkleRandom = new Random(System.currentTimeMillis() / 1000); // Cambio lento
-
-        for (int i = 0; i < 4; i++) {
-            float angle = (i * 90 + sparkleRandom.nextFloat() * 20 - 10) * (float)Math.PI / 180;
-            float distance = sparkleRadius * (0.7f + sparkleRandom.nextFloat() * 0.3f);
-            float sparkleX = centerX + (float)Math.cos(angle) * distance;
-            float sparkleY = centerY + (float)Math.sin(angle) * distance;
-
-            canvas.drawCircle(sparkleX, sparkleY, 2, sparklePaint);
+        // Add subtle glow effect for correct answer
+        if (food.isCorrect && food != bonusFood) {
+            Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            glowPaint.setColor(Color.argb(60, 76, 175, 80));
+            glowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.1f, BlurMaskFilter.Blur.OUTER));
+            canvas.drawCircle(centerX, centerY, circleRadius + (cellSize * 0.05f), glowPaint);
         }
     }
 
     public void update() {
         if (gameOver) return;
 
+        // Aplicar dirección pendiente si es válida
         if (pendingDirection != null && !direction.isOpposite(pendingDirection)) {
             direction = pendingDirection;
             pendingDirection = null;
         }
 
+        // Calcular nueva posición de la cabeza
         Point head = new Point(snake.get(0));
         switch (direction) {
             case UP: head.y -= 1; break;
@@ -461,55 +535,68 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case RIGHT: head.x += 1; break;
         }
 
+        // Verificar colisiones con paredes o consigo misma
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
             playSound(loseSound, "lose");
             return;
         }
 
+        // Añadir nueva cabeza
         snake.add(0, head);
 
+        // COLISIONES CON ALIMENTOS
         boolean foodEaten = false;
         boolean wrongFoodEaten = false;
 
+        // Verificar comida correcta
         if (correctFood != null && head.equals(correctFood.position)) {
             score++;
             playSound(correctSound, "correct");
             spawnQuizAndFoods();
             updateTextViews();
-            foodEaten = true;
+            foodEaten = true; // La serpiente crece
         }
 
-        if (!foodEaten) {
+        // Verificar colisión con comida incorrecta
+        if (!foodEaten) { // Solo verificar si no comió la correcta
             for (FoodItem f : wrongFoods) {
                 if (head.equals(f.position)) {
+                    Log.d("GameView", "Wrong food eaten! Value: " + f.value + ", Correct answer: " + correctAnswer);
                     playSound(errorSound, "error");
                     wrongFoodEaten = true;
-                    spawnQuizAndFoods();
+                    spawnQuizAndFoods(); // Generar nueva pregunta después del error
                     updateTextViews();
                     break;
                 }
             }
         }
 
+        // Verificar comida bonus
         if (!foodEaten && !wrongFoodEaten && bonusFood != null && head.equals(bonusFood.position)) {
             score += bonusValue;
             playSound(bonusSound, "bonus");
             bonusFood = null;
             updateTextViews();
-            foodEaten = true;
+            foodEaten = true; // La serpiente crece
         }
 
+        // Manejar el tamaño de la serpiente según lo que comió
         if (wrongFoodEaten) {
+            // Comió alimento incorrecto: la serpiente se hace más pequeña
+            // Quitar la cola normalmente Y un segmento adicional como castigo
             if (snake.size() > 1) {
-                snake.remove(snake.size() - 1);
+                snake.remove(snake.size() - 1); // Quitar cola normal
             }
             if (snake.size() > 1) {
-                snake.remove(snake.size() - 1);
+                snake.remove(snake.size() - 1); // Quitar segmento adicional como castigo
+                Log.d("GameView", "Snake shrunk due to wrong food. New size: " + snake.size());
             }
         } else if (foodEaten) {
-            // La serpiente crece
+            // Comió alimento correcto o bonus: la serpiente crece (no quitar cola)
+            // No hacer nada, la serpiente mantiene todos sus segmentos
         } else {
+            // Movimiento normal sin comer nada: quitar la cola
             snake.remove(snake.size() - 1);
         }
     }
@@ -520,6 +607,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             restartGame();
             return true;
         }
+
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 startX = event.getX();
@@ -528,13 +616,26 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case MotionEvent.ACTION_UP:
                 float dx = event.getX() - startX;
                 float dy = event.getY() - startY;
+
+                // Añadir umbral mínimo para detectar swipes válidos
                 float minSwipeDistance = 50f;
-                if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) break;
+
+                if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) {
+                    // Movimiento muy pequeño, ignorar
+                    break;
+                }
+
+                // Determinar dirección basada en el movimiento más grande
                 if (Math.abs(dx) > Math.abs(dy)) {
+                    // Movimiento horizontal
                     pendingDirection = dx > 0 ? Direction.RIGHT : Direction.LEFT;
                 } else {
+                    // Movimiento vertical
                     pendingDirection = dy > 0 ? Direction.DOWN : Direction.UP;
                 }
+
+                // Debug log para verificar detección de direcciones
+                Log.d("GameView", "Swipe detected: dx=" + dx + ", dy=" + dy + ", direction=" + pendingDirection);
                 break;
         }
         return true;
@@ -543,6 +644,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (gameOver) {
+            // Reiniciar con cualquier tecla cuando está en game over
             if (keyCode == KeyEvent.KEYCODE_SPACE || keyCode == KeyEvent.KEYCODE_ENTER ||
                     keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
                     keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
@@ -550,22 +652,31 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 return true;
             }
         } else {
+            // Control de dirección con teclas de flecha
             switch (keyCode) {
                 case KeyEvent.KEYCODE_DPAD_UP:
                 case KeyEvent.KEYCODE_W:
                     pendingDirection = Direction.UP;
+                    Log.d("GameView", "Key UP pressed");
                     return true;
                 case KeyEvent.KEYCODE_DPAD_DOWN:
                 case KeyEvent.KEYCODE_S:
                     pendingDirection = Direction.DOWN;
+                    Log.d("GameView", "Key DOWN pressed");
                     return true;
                 case KeyEvent.KEYCODE_DPAD_LEFT:
                 case KeyEvent.KEYCODE_A:
                     pendingDirection = Direction.LEFT;
+                    Log.d("GameView", "Key LEFT pressed");
                     return true;
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
                 case KeyEvent.KEYCODE_D:
                     pendingDirection = Direction.RIGHT;
+                    Log.d("GameView", "Key RIGHT pressed");
+                    return true;
+                case KeyEvent.KEYCODE_SPACE:
+                case KeyEvent.KEYCODE_ENTER:
+                    // Pausa/resume (opcional)
                     return true;
             }
         }
@@ -574,12 +685,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        // Solicitar foco para recibir eventos de teclado
         requestFocus();
+
         if (thread != null && !thread.isRunning()) {
             thread.setRunning(true);
             try { thread.start(); }
             catch (IllegalThreadStateException e) {
-                thread = new GameThread(getHolder(), this, gameSpeed);
+                thread = new GameThread(getHolder(), this, gameSpeed); // Pasar velocidad
                 thread.setRunning(true);
                 thread.start();
             }
@@ -595,6 +708,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             thread.setRunning(false);
             try { thread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
         }
+
+        // Limpiar recursos de sonido
         if (soundPool != null) {
             soundPool.release();
             soundPool = null;
@@ -610,7 +725,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     public void resume() {
         if (thread != null && !thread.isRunning()) {
-            thread = new GameThread(getHolder(), this, gameSpeed);
+            thread = new GameThread(getHolder(), this, gameSpeed); // Pasar velocidad
             thread.setRunning(true);
             try { thread.start(); }
             catch (IllegalThreadStateException e) {}
