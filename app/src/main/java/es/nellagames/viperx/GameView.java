@@ -69,6 +69,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private List<FoodItem> wrongFoods = new ArrayList<>();
     private FoodItem bonusFood;
 
+    // ⭐ CAMBIO: estrellas dinámicas
+    private class Star {
+        float x, y;
+        float alpha;
+        boolean increasing;
+    }
+    private List<Star> stars = new ArrayList<>();
+    private final int numStars = 50;
+
     public GameView(Context context) {
         this(context, null);
     }
@@ -87,6 +96,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         // Inicializar el juego DESPUÉS de cargar los bitmaps
         restartGame();
+
+        // ⭐ CAMBIO: inicializar estrellas
+        Random rand = new Random();
+        for (int i = 0; i < numStars; i++) {
+            Star s = new Star();
+            s.x = rand.nextFloat() * 1080; // Ajusta si quieres otra resolución base
+            s.y = rand.nextFloat() * 1920;
+            s.alpha = rand.nextFloat();
+            s.increasing = rand.nextBoolean();
+            stars.add(s);
+        }
     }
 
     private void initializeSounds(Context context) {
@@ -317,6 +337,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         // Limpiar canvas con fondo negro
         canvas.drawColor(Color.BLACK);
+
+        // ⭐ Dibujar estrellas (efecto parpadeo)
+        Paint starPaint = new Paint();
+        for (Star s : stars) {
+            starPaint.setColor(Color.WHITE);
+            starPaint.setAlpha((int) (s.alpha * 255));
+            canvas.drawCircle(s.x, s.y, 2.5f, starPaint);
+        }
+
 
         // Calcular dimensiones de la cuadrícula
         int gridRows = numCells, gridCols = numCells;
@@ -559,8 +588,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     }
 
 
+    // ⭐ CAMBIO: actualizar estrellas en update()
     public void update() {
         if (gameOver) return;
+
+        // ⭐ Actualizar alpha de las estrellas (efecto parpadeo)
+        for (Star s : stars) {
+            if (s.increasing) {
+                s.alpha += 0.02f;
+                if (s.alpha >= 1f) s.increasing = false;
+            } else {
+                s.alpha -= 0.02f;
+                if (s.alpha <= 0.2f) s.increasing = true;
+            }
+        }
 
         // Aplicar dirección pendiente si es válida
         if (pendingDirection != null && !direction.isOpposite(pendingDirection)) {
@@ -597,17 +638,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             playSound(correctSound, "correct");
             spawnQuizAndFoods();
             updateTextViews();
-            foodEaten = true; // La serpiente crece
+            foodEaten = true;
         }
 
-        // Verificar colisión con comida incorrecta
-        if (!foodEaten) { // Solo verificar si no comió la correcta
+        // Verificar comida incorrecta
+        if (!foodEaten) {
             for (FoodItem f : wrongFoods) {
                 if (head.equals(f.position)) {
                     Log.d("GameView", "Wrong food eaten! Value: " + f.value + ", Correct answer: " + correctAnswer);
                     playSound(errorSound, "error");
                     wrongFoodEaten = true;
-                    spawnQuizAndFoods(); // Generar nueva pregunta después del error
+                    spawnQuizAndFoods();
                     updateTextViews();
                     break;
                 }
@@ -620,28 +661,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             playSound(bonusSound, "bonus");
             bonusFood = null;
             updateTextViews();
-            foodEaten = true; // La serpiente crece
+            foodEaten = true;
         }
 
-        // Manejar el tamaño de la serpiente según lo que comió
+        // Manejar tamaño de la serpiente
         if (wrongFoodEaten) {
-            // Comió alimento incorrecto: la serpiente se hace más pequeña
-            // Quitar la cola normalmente Y un segmento adicional como castigo
+            if (snake.size() > 1) snake.remove(snake.size() - 1);
             if (snake.size() > 1) {
-                snake.remove(snake.size() - 1); // Quitar cola normal
-            }
-            if (snake.size() > 1) {
-                snake.remove(snake.size() - 1); // Quitar segmento adicional como castigo
+                snake.remove(snake.size() - 1);
                 Log.d("GameView", "Snake shrunk due to wrong food. New size: " + snake.size());
             }
-        } else if (foodEaten) {
-            // Comió alimento correcto o bonus: la serpiente crece (no quitar cola)
-            // No hacer nada, la serpiente mantiene todos sus segmentos
-        } else {
-            // Movimiento normal sin comer nada: quitar la cola
-            snake.remove(snake.size() - 1);
+        } else if (!foodEaten) {
+            snake.remove(snake.size() - 1); // Movimiento normal
         }
     }
+
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
