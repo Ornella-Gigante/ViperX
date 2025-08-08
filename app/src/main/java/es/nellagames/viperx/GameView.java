@@ -448,7 +448,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         shadowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.05f, BlurMaskFilter.Blur.NORMAL));
 
         // Make food much larger with minimal padding
-        int foodPadding = cellSize / 30; // Even less padding for maximum size
+        int foodPadding = cellSize / 50; // Even less padding for maximum size
         int foodSize = cellSize - (foodPadding * 2);
 
         // Draw shadow slightly offset
