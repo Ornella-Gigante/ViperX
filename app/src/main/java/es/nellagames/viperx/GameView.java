@@ -443,49 +443,46 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         int x = offsetX + food.position.x * cellSize;
         int y = offsetY + food.position.y * cellSize;
 
-        // Draw food bitmap with slight padding for better visual appeal
-        int foodPadding = cellSize / 10;
+        // Make food larger - use almost the entire cell with minimal padding
+        int foodPadding = cellSize / 20; // Reduced padding for larger food
         int foodSize = cellSize - (foodPadding * 2);
         Bitmap scaledFood = Bitmap.createScaledBitmap(food.bitmap, foodSize, foodSize, false);
         canvas.drawBitmap(scaledFood, x + foodPadding, y + foodPadding, null);
 
-        // Enhanced number styling
+        // Enhanced number styling with neutral colors
         Paint numberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-        // Create background circle for the number
+        // Create background circle for the number - neutral colors only
         Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        if (food.isCorrect && food != bonusFood) {
-            // Correct answer - green background
-            circlePaint.setColor(Color.argb(220, 76, 175, 80)); // Material Green with transparency
-        } else if (!food.isCorrect) {
-            // Wrong answer - red background
-            circlePaint.setColor(Color.argb(220, 244, 67, 54)); // Material Red with transparency
+        if (food == bonusFood) {
+            // Bonus food - special gold background
+            circlePaint.setColor(Color.argb(240, 255, 193, 7)); // Material Amber/Gold
         } else {
-            // Bonus food - gold background
-            circlePaint.setColor(Color.argb(220, 255, 193, 7)); // Material Amber/Gold with transparency
+            // All quiz foods get the same neutral dark blue background
+            circlePaint.setColor(Color.argb(240, 63, 81, 181)); // Material Indigo - neutral color
         }
 
-        // Draw background circle
-        float circleRadius = cellSize * 0.18f;
-        float centerX = x + cellSize * 0.75f;
-        float centerY = y + cellSize * 0.25f;
+        // Make number circle larger and better positioned
+        float circleRadius = cellSize * 0.22f; // Increased size
+        float centerX = x + cellSize * 0.8f; // Better positioning
+        float centerY = y + cellSize * 0.2f;
         canvas.drawCircle(centerX, centerY, circleRadius, circlePaint);
 
         // Draw white border around circle
         Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         borderPaint.setColor(Color.WHITE);
         borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(cellSize * 0.02f);
+        borderPaint.setStrokeWidth(cellSize * 0.025f); // Slightly thicker border
         canvas.drawCircle(centerX, centerY, circleRadius, borderPaint);
 
-        // Configure number text
+        // Configure number text - larger and clearer
         numberPaint.setColor(Color.WHITE);
-        numberPaint.setTextSize(cellSize * 0.25f);
+        numberPaint.setTextSize(cellSize * 0.3f); // Larger text
         numberPaint.setTextAlign(Paint.Align.CENTER);
         numberPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
 
-        // Add shadow for better readability
-        numberPaint.setShadowLayer(2, 1, 1, Color.argb(150, 0, 0, 0));
+        // Add stronger shadow for better readability
+        numberPaint.setShadowLayer(3, 1, 1, Color.argb(200, 0, 0, 0));
 
         // Draw the number
         String numberText = String.valueOf(food.value);
@@ -495,26 +492,28 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         canvas.drawText(numberText, centerX, textY, numberPaint);
 
-        // Add bonus indicator for bonus food
+        // Add bonus indicator for bonus food only
         if (food == bonusFood) {
             Paint bonusPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             bonusPaint.setColor(Color.argb(255, 255, 215, 0)); // Gold color
-            bonusPaint.setTextSize(cellSize * 0.15f);
+            bonusPaint.setTextSize(cellSize * 0.18f); // Larger bonus text
             bonusPaint.setTextAlign(Paint.Align.CENTER);
             bonusPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
             bonusPaint.setShadowLayer(2, 1, 1, Color.BLACK);
 
             // Draw "BONUS" text below the food
-            canvas.drawText("BONUS", x + cellSize / 2, y + cellSize - (cellSize * 0.05f), bonusPaint);
+            canvas.drawText("BONUS", x + cellSize / 2, y + cellSize - (cellSize * 0.02f), bonusPaint);
         }
 
-        // Add subtle glow effect for correct answer
-        if (food.isCorrect && food != bonusFood) {
-            Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            glowPaint.setColor(Color.argb(60, 76, 175, 80));
-            glowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.1f, BlurMaskFilter.Blur.OUTER));
-            canvas.drawCircle(centerX, centerY, circleRadius + (cellSize * 0.05f), glowPaint);
+        // Add subtle neutral glow effect for all foods (not revealing correct answers)
+        Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        if (food == bonusFood) {
+            glowPaint.setColor(Color.argb(40, 255, 193, 7)); // Gold glow for bonus
+        } else {
+            glowPaint.setColor(Color.argb(30, 63, 81, 181)); // Neutral glow for all quiz foods
         }
+        glowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.08f, BlurMaskFilter.Blur.OUTER));
+        canvas.drawCircle(centerX, centerY, circleRadius + (cellSize * 0.03f), glowPaint);
     }
 
     public void update() {
