@@ -27,6 +27,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private boolean gameOver = false;
     private final int numCells = 10;
     private float startX, startY;
+    
 
     private int bonusValue = 5;
 
@@ -76,11 +77,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         boolean increasing;
     }
     private List<Star> stars = new ArrayList<>();
-    private final int numStars = 50;
+    private final int numStars = 180;
 
     public GameView(Context context) {
         this(context, null);
     }
+
 
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -108,6 +110,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             stars.add(s);
         }
     }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+
+        // Inicializar estrellas cuando la vista ya tiene dimensiones válidas
+        // CORREGIDO: Distribuir estrellas por toda la pantalla
+        stars = new ArrayList<>();
+        Random random = new Random();
+        for (int i = 0; i < numStars; i++) {
+            Star s = new Star();
+            s.x = random.nextFloat() * w;  // Usar ancho real de la vista
+            s.y = random.nextFloat() * h;  // Usar alto real de la vista
+            s.alpha = 0.3f + random.nextFloat() * 0.7f; // Alpha entre 0.3 y 1.0
+            s.increasing = random.nextBoolean();
+            stars.add(s);
+        }
+    }
+
 
     private void initializeSounds(Context context) {
         try {
@@ -335,17 +356,29 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         super.draw(canvas);
         if (canvas == null) return;
 
-        // Limpiar canvas con fondo negro
-        canvas.drawColor(Color.BLACK);
+        // MEJORADO: Cambiar fondo negro por un azul oscuro espacial más amigable
+        canvas.drawColor(Color.rgb(15, 25, 45)); // Azul oscuro espacial
 
-        // ⭐ Dibujar estrellas (efecto parpadeo)
-        Paint starPaint = new Paint();
+        // ⭐ Dibujar estrellas en todo el canvas con mejor variedad
+        Paint starPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         for (Star s : stars) {
-            starPaint.setColor(Color.WHITE);
-            starPaint.setAlpha((int) (s.alpha * 255));
-            canvas.drawCircle(s.x, s.y, 2.5f, starPaint);
-        }
+            // Crear variaciones en el color de las estrellas
+            int starColor;
+            if (s.alpha > 0.8f) {
+                starColor = Color.rgb(255, 255, 200); // Estrellas brillantes - amarillo claro
+            } else if (s.alpha > 0.6f) {
+                starColor = Color.rgb(220, 220, 255); // Estrellas medias - azul claro
+            } else {
+                starColor = Color.rgb(255, 255, 255); // Estrellas normales - blanco
+            }
 
+            starPaint.setColor(starColor);
+            starPaint.setAlpha((int) (s.alpha * 255));
+
+            // Variar el tamaño de las estrellas según su brillo
+            float starSize = s.alpha > 0.7f ? 3f : 2f;
+            canvas.drawCircle(s.x, s.y, starSize, starPaint);
+        }
 
         // Calcular dimensiones de la cuadrícula
         int gridRows = numCells, gridCols = numCells;
@@ -448,20 +481,23 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         for (FoodItem wf : wrongFoods) drawFood(canvas, wf, offsetX, offsetY, cellSizeDynamic);
         if (bonusFood != null) drawFood(canvas, bonusFood, offsetX, offsetY, cellSizeDynamic);
 
-        // GAME OVER overlay
+        // GAME OVER overlay con mejor estilo
         if (gameOver) {
+            // Overlay más suave
             Paint overlayPaint = new Paint();
-            overlayPaint.setColor(Color.argb(180, 0, 0, 0));
+            overlayPaint.setColor(Color.argb(200, 15, 25, 45)); // Mismo color base pero transparente
             canvas.drawRect(0, 0, getWidth(), getHeight(), overlayPaint);
 
-            Paint overPaint = new Paint();
-            overPaint.setColor(Color.WHITE);
+            Paint overPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            overPaint.setColor(Color.rgb(255, 255, 200)); // Amarillo claro como las estrellas brillantes
             overPaint.setTextSize(60f);
             overPaint.setFakeBoldText(true);
             overPaint.setTextAlign(Paint.Align.CENTER);
-            overPaint.setShadowLayer(4, 2, 2, Color.BLACK);
+            overPaint.setShadowLayer(6, 2, 2, Color.BLACK);
             canvas.drawText("GAME OVER", getWidth() / 2, getHeight() / 2 - 50, overPaint);
+
             overPaint.setTextSize(40f);
+            overPaint.setColor(Color.rgb(220, 220, 255)); // Azul claro
             canvas.drawText("Tap to Restart", getWidth() / 2, getHeight() / 2 + 50, overPaint);
         }
     }
@@ -587,19 +623,26 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 cellSize * 0.05f, cellSize * 0.05f, highlightPaint);
     }
 
-
-    // ⭐ CAMBIO: actualizar estrellas en update()
+    // ⭐ MEJORADO: actualizar estrellas con mejor animación
     public void update() {
         if (gameOver) return;
 
-        // ⭐ Actualizar alpha de las estrellas (efecto parpadeo)
+        // ⭐ Actualizar alpha de las estrellas con velocidad variable
         for (Star s : stars) {
+            float speed = 0.015f + (s.alpha * 0.01f); // Estrellas más brillantes parpadean más rápido
+
             if (s.increasing) {
-                s.alpha += 0.02f;
-                if (s.alpha >= 1f) s.increasing = false;
+                s.alpha += speed;
+                if (s.alpha >= 1f) {
+                    s.alpha = 1f;
+                    s.increasing = false;
+                }
             } else {
-                s.alpha -= 0.02f;
-                if (s.alpha <= 0.2f) s.increasing = true;
+                s.alpha -= speed;
+                if (s.alpha <= 0.3f) {
+                    s.alpha = 0.3f;
+                    s.increasing = true;
+                }
             }
         }
 
@@ -674,6 +717,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         } else if (!foodEaten) {
             snake.remove(snake.size() - 1); // Movimiento normal
         }
+
     }
 
 
