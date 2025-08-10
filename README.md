@@ -57,7 +57,7 @@ In Maths Snake Adventure, kids navigate a growing snake across a vibrant board, 
 ## 🎥 Demo
 
 <p align="center">
-  <a href="https://vimeo.com/1103254017" title="ViperX Demo">
+  <a href="https://vimeo.com/1108876323" title="ViperX Demo">
     <img src="https://github.com/Ornella-Gigante/ViperX/blob/main/viper1.png" alt="ViperX Demo" width="400">
   </a>
 </p>
