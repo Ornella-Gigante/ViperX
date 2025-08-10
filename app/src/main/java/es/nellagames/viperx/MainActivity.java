@@ -130,20 +130,6 @@ public class MainActivity extends Activity {
         updateHighScoreDisplay();
     }
 
-    private void showGameLayer() {
-        // CORREGIDO: Ya no intentar conectar TextViews que no existen
-        // El GameView ahora maneja la UI internamente con drawQuestionArea()
-
-        // Cambiar visibilidad
-        gameLayer.setVisibility(View.VISIBLE);
-        menuLayer.setVisibility(View.GONE);
-        instructionsLayer.setVisibility(View.GONE);
-
-        // Reiniciar y resumir el juego
-        gameView.restartGame();
-        gameView.resume();
-    }
-
     private void updateHighScoreDisplay() {
         if (highScoreLabel != null)
             highScoreLabel.setText("High Score: " + highScore);
@@ -205,6 +191,35 @@ public class MainActivity extends Activity {
     public void onGameFinished(int score) {
         runOnUiThread(() -> showGameOver(score));
     }
+
+    private void showGameLayer() {
+        // ✅ CONFIGURAR el listener del GameView ANTES de mostrar el juego
+        gameView.setGameEventListener(new GameView.GameEventListener() {
+            @Override
+            public void onBackToMenuPressed() {
+                showMenu(); // Regresar al menú principal
+            }
+        });
+
+        // Cambiar visibilidad
+        gameLayer.setVisibility(View.VISIBLE);
+        menuLayer.setVisibility(View.GONE);
+        instructionsLayer.setVisibility(View.GONE);
+
+        // ✅ SOLICITAR FOCO explícitamente
+        gameView.post(new Runnable() {
+            @Override
+            public void run() {
+                gameView.requestFocus();
+                gameView.requestFocusFromTouch();
+            }
+        });
+
+        // Reiniciar y resumir el juego
+        gameView.restartGame();
+        gameView.resume();
+    }
+
 
     @Override
     public void onBackPressed() {
