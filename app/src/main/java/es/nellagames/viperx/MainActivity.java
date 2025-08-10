@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
     private GameView gameView;
     private LinearLayout menuLayer;
     private FrameLayout instructionsLayer;
-    private FrameLayout gameLayer;  // Agregado
+    private FrameLayout gameLayer;
     private TextView highScoreLabel;
     private Button playButton, instructionsButton, backFromInstructionsButton;
     private SharedPreferences prefs;
@@ -54,7 +54,7 @@ public class MainActivity extends Activity {
         gameView = findViewById(R.id.gameView);
         menuLayer = findViewById(R.id.menuLayer);
         instructionsLayer = findViewById(R.id.instructionsLayer);
-        gameLayer = findViewById(R.id.gameLayer);  // Agregado
+        gameLayer = findViewById(R.id.gameLayer);
         highScoreLabel = findViewById(R.id.highScoreLabel);
         playButton = findViewById(R.id.playButton);
         instructionsButton = findViewById(R.id.instructionsButton);
@@ -67,11 +67,11 @@ public class MainActivity extends Activity {
         applyRoundedCorners(instructionsButton, "#577590");
         applyRoundedCorners(backFromInstructionsButton, "#B983FF");
 
-        // PLAY -- mostrar el juego (CORREGIDO)
+        // PLAY -- mostrar el juego
         playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showGameLayer();  // Usar el método correcto
+                showGameLayer();
             }
         });
 
@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 menuLayer.setVisibility(View.GONE);
-                gameLayer.setVisibility(View.GONE);  // Cambiar gameView por gameLayer
+                gameLayer.setVisibility(View.GONE);
                 instructionsLayer.setVisibility(View.VISIBLE);
             }
         });
@@ -135,6 +135,7 @@ public class MainActivity extends Activity {
             highScoreLabel.setText("High Score: " + highScore);
     }
 
+    // CORREGIDO: Método para actualizar el high score y guardarlo
     public void updateHighScore(int newScore) {
         if (newScore > highScore) {
             highScore = newScore;
@@ -152,7 +153,7 @@ public class MainActivity extends Activity {
         builder.setMessage("Final Score: " + finalScore +
                 (finalScore == highScore ? "\n🎉 NEW HIGH SCORE! 🎉" : ""));
         builder.setPositiveButton("Play Again", (dialog, which) -> {
-            showGameLayer();  // Usar showGameLayer en lugar de la lógica manual
+            showGameLayer();
         });
         builder.setNegativeButton("Menu", (dialog, which) -> showMenu());
         builder.setCancelable(false);
@@ -187,21 +188,27 @@ public class MainActivity extends Activity {
         if (gameView != null) gameView.pause();
     }
 
-    // Llamar esto desde GameView cuando termine la partida:
-    public void onGameFinished(int score) {
-        runOnUiThread(() -> showGameOver(score));
-    }
+    // ELIMINADO: No necesario ya que el GameView maneja todo internamente
+    // public void onGameFinished(int score) { ... }
 
     private void showGameLayer() {
-        // Configurar el listener del GameView
+        // CORREGIDO: Configurar el listener del GameView correctamente
         gameView.setGameEventListener(new GameView.GameEventListener() {
             @Override
             public void onBackToMenuPressed() {
+                // Actualizar high score antes de volver al menú
+                updateHighScore(gameView.getCurrentScore());
                 showMenu();
+            }
+
+            @Override
+            public void onGameOver(int finalScore) {
+                // Actualizar high score cuando el juego termine
+                updateHighScore(finalScore);
             }
         });
 
-        // NUEVO: Pasar el high score al GameView
+        // Pasar el high score al GameView
         gameView.setHighScore(highScore);
 
         // Cambiar visibilidad
@@ -223,11 +230,11 @@ public class MainActivity extends Activity {
         gameView.resume();
     }
 
-
-
     @Override
     public void onBackPressed() {
         if (gameLayer != null && gameLayer.getVisibility() == View.VISIBLE) {
+            // CORREGIDO: Actualizar high score antes de salir del juego
+            updateHighScore(gameView.getCurrentScore());
             showMenu();
         } else {
             super.onBackPressed();

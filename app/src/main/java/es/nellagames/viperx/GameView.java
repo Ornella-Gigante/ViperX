@@ -10,6 +10,7 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.TextView;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -18,6 +19,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     private GameThread thread;
     private int highScore = 0;
+
+    // Listener para comunicar eventos a la Activity
+    private GameEventListener gameEventListener;
+
+    // Estado del juego
     private List<Point> snake = new ArrayList<>();
     private Direction direction = Direction.RIGHT;
     private Direction pendingDirection = null;
@@ -29,16 +35,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private final int numCells = 10;
     private float startX, startY;
 
+    // Bonus
     private int bonusValue = 5;
     private final long gameSpeed = 1200;
 
+    // No usamos TextViews para evitar duplicación en pantalla
     private TextView questionTextView;
     private TextView scoreTextView;
 
+    // Sonidos
     private SoundPool soundPool;
     private int correctSound, errorSound, bonusSound, loseSound;
     private boolean soundsLoaded = false;
 
+    // Sprites
     private Bitmap head_up, head_down, head_left, head_right;
     private Bitmap body_vertical, body_horizontal, body_topleft, body_topright, body_bottomleft, body_bottomright;
     private Bitmap tail_up, tail_down, tail_left, tail_right;
@@ -46,15 +56,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap[] foodBitmaps;
     private Bitmap gridBackground;
 
-    // NUEVO: Interfaz para comunicar con la Activity
+    // Listener de eventos
     public interface GameEventListener {
         void onBackToMenuPressed();
+        void onGameOver(int finalScore); // Para notificar game over con puntuación
     }
-    private GameEventListener gameEventListener;
 
-    // NUEVO: Rectángulo del botón Back to Menu
+    // Botón Back to Menu
     private RectF backToMenuButton = new RectF();
 
+    // Estructura de alimentos
     private class FoodItem {
         Point position;
         int value;
@@ -71,6 +82,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private List<FoodItem> wrongFoods = new ArrayList<>();
     private FoodItem bonusFood;
 
+    // Estrellas de fondo
     private class Star {
         float x, y;
         float alpha;
@@ -93,6 +105,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         initializeBitmaps();
         restartGame();
 
+        // Inicializar estrellas con valores por defecto, se recalibran en onSizeChanged
         Random rand = new Random();
         for (int i = 0; i < numStars; i++) {
             Star s = new Star();
@@ -104,7 +117,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    // NUEVO: Método para establecer el listener
+    // Exponer listener para Activity
     public void setGameEventListener(GameEventListener listener) {
         this.gameEventListener = listener;
     }
@@ -136,7 +149,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
                     if (status == 0) {
                         soundsLoaded = true;
-                        Log.d("GameView", "Sound loaded successfully - ID: " + sampleId);
+                        Log.d("GameView", "Sound loaded - ID: " + sampleId);
+                    } else {
+                        Log.e("GameView", "Sound load failed - ID: " + sampleId);
                     }
                 }
             });
@@ -166,9 +181,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             candy = BitmapFactory.decodeResource(getResources(), R.drawable.candy);
             sushi1 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi1);
             sushi2 = BitmapFactory.decodeResource(getResources(), R.drawable.sushi2);
+
             gridBackground = BitmapFactory.decodeResource(getResources(), R.drawable.cuadricula);
+
             foodBitmaps = new Bitmap[]{apple, candy, sushi1, sushi2};
         } catch (Exception e) {
+            Log.e("GameView", "Error loading bitmaps: " + e.getMessage());
             createFallbackBitmaps();
         }
     }
@@ -178,7 +196,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             try {
                 soundPool.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f);
             } catch (Exception e) {
-                Log.e("GameView", "Exception playing " + soundName + " sound: " + e.getMessage());
+                Log.e("GameView", "Play sound error (" + soundName + "): " + e.getMessage());
             }
         }
     }
@@ -223,20 +241,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         return bitmap;
     }
 
+    // No usar TextViews externos para no duplicar la UI
     public void setTextViews(TextView questionText, TextView scoreText) {
         this.questionTextView = null;
         this.scoreTextView = null;
     }
 
     private void updateTextViews() {
-        // Método vacío - no se usan TextViews externos
+        // Intencionadamente vacío: toda la UI se dibuja en canvas
     }
 
-    // NUEVO: Método para establecer el high score desde MainActivity
+    // Recibir high score desde MainActivity
     public void setHighScore(int highScore) {
         this.highScore = highScore;
     }
 
+    // Exponer el score actual (para guardar/best)
+    public int getCurrentScore() {
+        return score;
+    }
 
     public void restartGame() {
         snake.clear();
@@ -312,37 +335,33 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         super.draw(canvas);
         if (canvas == null) return;
 
-        // Fondo azul oscuro espacial
+        // Fondo
         canvas.drawColor(Color.rgb(15, 25, 45));
 
-        // Dibujar estrellas con variedad
+        // Estrellas
         Paint starPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         for (Star s : stars) {
             int starColor;
-            if (s.alpha > 0.8f) {
-                starColor = Color.rgb(255, 255, 200);
-            } else if (s.alpha > 0.6f) {
-                starColor = Color.rgb(220, 220, 255);
-            } else {
-                starColor = Color.rgb(255, 255, 255);
-            }
+            if (s.alpha > 0.8f) starColor = Color.rgb(255, 255, 200);
+            else if (s.alpha > 0.6f) starColor = Color.rgb(220, 220, 255);
+            else starColor = Color.rgb(255, 255, 255);
             starPaint.setColor(starColor);
             starPaint.setAlpha((int) (s.alpha * 255));
             float starSize = s.alpha > 0.7f ? 3f : 2f;
             canvas.drawCircle(s.x, s.y, starSize, starPaint);
         }
 
-        // MODIFICADO: Área de pregunta MÁS ABAJO, CENTRADA y MÁS GRANDE
+        // Caja de pregunta/operación sobre estrellas
         drawQuestionArea(canvas);
 
-        // Calcular dimensiones de cuadrícula (ajustada para el cuadro más abajo)
+        // Cuadrícula
         int availableWidth = canvas.getWidth() - 32;
-        int availableHeight = canvas.getHeight() - 380; // Más espacio para el cuadro más grande
+        int availableHeight = canvas.getHeight() - 380; // espacio para la caja grande
         int cellSizeDynamic = Math.min(availableWidth / numCells, availableHeight / numCells);
         int gridWidth = cellSizeDynamic * numCells;
         int gridHeight = cellSizeDynamic * numCells;
         int offsetX = (canvas.getWidth() - gridWidth) / 2;
-        int offsetY = ((canvas.getHeight() - gridHeight) / 2) + 190; // Mover más hacia abajo
+        int offsetY = ((canvas.getHeight() - gridHeight) / 2) + 190;
 
         if (gridBackground != null) {
             Bitmap scaledGrid = Bitmap.createScaledBitmap(gridBackground, gridWidth, gridHeight, false);
@@ -359,8 +378,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
-        // Dibujar serpiente
-        if (snake != null && !snake.isEmpty()) {
+        // Serpiente
+        if (!snake.isEmpty()) {
             for (int i = 0; i < snake.size(); i++) {
                 Point segment = snake.get(i);
                 int x = offsetX + segment.x * cellSizeDynamic;
@@ -398,12 +417,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
-        // Dibujar alimentos
+        // Alimentos
         drawFood(canvas, correctFood, offsetX, offsetY, cellSizeDynamic);
         for (FoodItem wf : wrongFoods) drawFood(canvas, wf, offsetX, offsetY, cellSizeDynamic);
         if (bonusFood != null) drawFood(canvas, bonusFood, offsetX, offsetY, cellSizeDynamic);
 
-        // GAME OVER con botón de Back to Menu
+        // Game Over + botón volver al menú
         if (gameOver) {
             Paint overlayPaint = new Paint();
             overlayPaint.setColor(Color.argb(220, 10, 15, 30));
@@ -462,15 +481,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             restartPaint.setTextAlign(Paint.Align.CENTER);
             restartPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
             restartPaint.setShadowLayer(4, 2, 2, Color.BLACK);
-
             long time = System.currentTimeMillis();
             float pulse = (float) (0.8f + 0.2f * Math.sin(time * 0.005f));
             restartPaint.setAlpha((int) (255 * pulse));
             canvas.drawText("🎮 TAP TO RESTART 🎮", getWidth() / 2, getHeight() / 2 + 120, restartPaint);
 
-            // NUEVO: Botón Back to Menu
+            // Botón Back to Menu
             drawBackToMenuButton(canvas);
 
+            // Líneas decorativas
             Paint decorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             decorPaint.setColor(Color.rgb(100, 150, 255));
             decorPaint.setStrokeWidth(4f);
@@ -478,6 +497,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             canvas.drawLine(50, getHeight() / 2 - 180, getWidth() - 50, getHeight() / 2 - 180, decorPaint);
             canvas.drawLine(50, getHeight() / 2 + 280, getWidth() - 50, getHeight() / 2 + 280, decorPaint);
 
+            // Estrellas decorativas
             Paint starDecorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             starDecorPaint.setColor(Color.rgb(255, 215, 0));
             starDecorPaint.setTextSize(24f);
@@ -489,6 +509,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
+    // Caja de operaciones centrada, más abajo y más grande. Muestra Score y Best.
     private void drawQuestionArea(Canvas canvas) {
         float questionAreaHeight = 320f;
         float questionAreaWidth = canvas.getWidth() * 0.9f;
@@ -503,13 +524,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         // Fondo con gradiente
         Paint questionBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        questionBgPaint.setColor(Color.argb(250, 25, 35, 55));
         LinearGradient gradient = new LinearGradient(
                 left, top, left, bottom,
-                new int[]{
-                        Color.argb(250, 35, 45, 65),
-                        Color.argb(250, 20, 30, 50)
-                },
+                new int[]{ Color.argb(250, 35, 45, 65), Color.argb(250, 20, 30, 50) },
                 null,
                 Shader.TileMode.CLAMP
         );
@@ -532,7 +549,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         RectF innerRect = new RectF(left + 4, top + 4, right - 4, bottom - 4);
         canvas.drawRoundRect(innerRect, 31f, 31f, innerBorderPaint);
 
-        // Texto de la pregunta
+        // Pregunta
         Paint questionTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         questionTextPaint.setColor(Color.rgb(255, 255, 230));
         questionTextPaint.setTextSize(64f);
@@ -543,7 +560,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         String questionText = "Q: " + questionA + " " + operation + " " + questionB + " = ?";
         canvas.drawText(questionText, centerX, centerY - 60f, questionTextPaint);
 
-        // Línea separadora
+        // Separador
         Paint separatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         separatorPaint.setColor(Color.argb(180, 100, 150, 255));
         separatorPaint.setStrokeWidth(4f);
@@ -551,29 +568,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         float separatorRight = centerX + (questionAreaWidth * 0.35f);
         canvas.drawLine(separatorLeft, centerY - 10f, separatorRight, centerY - 10f, separatorPaint);
 
-        // NUEVO: Score actual y high score en la misma línea
+        // Score actual (izquierda)
         Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         scorePaint.setColor(Color.rgb(180, 255, 180));
         scorePaint.setTextSize(40f);
-        scorePaint.setTextAlign(Paint.Align.CENTER);
+        scorePaint.setTextAlign(Paint.Align.LEFT);
         scorePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
         scorePaint.setShadowLayer(8, 3, 3, Color.argb(200, 0, 0, 0));
-
-        // Score actual (lado izquierdo)
-        scorePaint.setTextAlign(Paint.Align.LEFT);
         canvas.drawText("Score: " + score, centerX - (questionAreaWidth * 0.3f), centerY + 40f, scorePaint);
 
-        // High Score (lado derecho)
+        // High Score (derecha)
         Paint highScorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        highScorePaint.setColor(Color.rgb(255, 215, 0)); // Dorado para high score
+        highScorePaint.setColor(Color.rgb(255, 215, 0));
         highScorePaint.setTextSize(40f);
         highScorePaint.setTextAlign(Paint.Align.RIGHT);
         highScorePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
         highScorePaint.setShadowLayer(8, 3, 3, Color.argb(200, 0, 0, 0));
-
         canvas.drawText("Best: " + highScore, centerX + (questionAreaWidth * 0.3f), centerY + 40f, highScorePaint);
 
-        // Efectos decorativos
+        // Efecto glow
         Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         glowPaint.setColor(Color.argb(60, 255, 255, 255));
         glowPaint.setStyle(Paint.Style.STROKE);
@@ -581,7 +594,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         RectF glowRect = new RectF(left + 2, top + 2, right - 2, bottom - 2);
         canvas.drawRoundRect(glowRect, 33f, 33f, glowPaint);
 
-        // Puntos decorativos en las esquinas
+        // Puntos en esquinas
         Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         dotPaint.setColor(Color.argb(200, 150, 200, 255));
         float dotSize = 12f;
@@ -591,39 +604,31 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         canvas.drawCircle(right - 30f, bottom - 30f, dotSize, dotPaint);
     }
 
-
-    // NUEVO: Dibujar botón Back to Menu
+    // Botón Back to Menu
     private void drawBackToMenuButton(Canvas canvas) {
-        float buttonWidth = canvas.getWidth() * 0.6f; // 60% del ancho
+        float buttonWidth = canvas.getWidth() * 0.6f;
         float buttonHeight = 70f;
         float buttonLeft = (canvas.getWidth() - buttonWidth) / 2f;
-        float buttonTop = (canvas.getHeight() / 2f) + 190f; // Debajo del texto de restart
+        float buttonTop = (canvas.getHeight() / 2f) + 190f;
 
-        // Actualizar rectángulo del botón para detección de toque
         backToMenuButton.set(buttonLeft, buttonTop, buttonLeft + buttonWidth, buttonTop + buttonHeight);
 
-        // Fondo del botón con gradiente
         Paint buttonBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         LinearGradient buttonGradient = new LinearGradient(
                 buttonLeft, buttonTop, buttonLeft, buttonTop + buttonHeight,
-                new int[]{
-                        Color.argb(255, 70, 130, 180),
-                        Color.argb(255, 50, 100, 150)
-                },
+                new int[]{ Color.argb(255, 70, 130, 180), Color.argb(255, 50, 100, 150) },
                 null,
                 Shader.TileMode.CLAMP
         );
         buttonBgPaint.setShader(buttonGradient);
         canvas.drawRoundRect(backToMenuButton, 25f, 25f, buttonBgPaint);
 
-        // Borde del botón
         Paint buttonBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         buttonBorderPaint.setStyle(Paint.Style.STROKE);
         buttonBorderPaint.setStrokeWidth(4f);
         buttonBorderPaint.setColor(Color.argb(255, 100, 150, 200));
         canvas.drawRoundRect(backToMenuButton, 25f, 25f, buttonBorderPaint);
 
-        // Texto del botón
         Paint buttonTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         buttonTextPaint.setColor(Color.WHITE);
         buttonTextPaint.setTextSize(38f);
@@ -635,7 +640,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         float textY = backToMenuButton.centerY() + (buttonTextPaint.getTextSize() / 3f);
         canvas.drawText("🏠 BACK TO MENU", textX, textY, buttonTextPaint);
 
-        // Efecto de brillo en el botón
         Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         glowPaint.setColor(Color.argb(40, 255, 255, 255));
         glowPaint.setStyle(Paint.Style.STROKE);
@@ -649,29 +653,34 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         canvas.drawRoundRect(glowRect, 23f, 23f, glowPaint);
     }
 
+    // Dibuja la comida con sombra orgánica y número superpuesto
     private void drawFood(Canvas canvas, FoodItem food, int offsetX, int offsetY, int cellSize) {
         if (food == null) return;
 
         int x = offsetX + food.position.x * cellSize;
         int y = offsetY + food.position.y * cellSize;
-        int foodPadding = cellSize / 50;
+
+        int foodPadding = Math.max(1, cellSize / 50);
         int foodSize = cellSize - (foodPadding * 2);
-        int shadowOffset = cellSize / 40;
+        int shadowOffset = Math.max(1, cellSize / 40);
 
         Bitmap scaledFood = Bitmap.createScaledBitmap(food.bitmap, foodSize, foodSize, true);
 
+        // Sombra que sigue la forma del bitmap
         Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         shadowPaint.setColorFilter(new ColorMatrixColorFilter(new ColorMatrix(new float[]{
                 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0,
-                0, 0, 0, 0.3f, 0
+                0, 0, 0, 0.30f, 0
         })));
-        shadowPaint.setMaskFilter(new BlurMaskFilter(cellSize * 0.05f, BlurMaskFilter.Blur.NORMAL));
-
+        shadowPaint.setMaskFilter(new BlurMaskFilter(Math.max(1f, cellSize * 0.05f), BlurMaskFilter.Blur.NORMAL));
         canvas.drawBitmap(scaledFood, x + foodPadding + shadowOffset, y + foodPadding + shadowOffset, shadowPaint);
+
+        // Comida
         canvas.drawBitmap(scaledFood, x + foodPadding, y + foodPadding, null);
 
+        // Fondo para el número
         Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         if (food == bonusFood) {
             bgPaint.setColor(Color.argb(200, 255, 193, 7));
@@ -679,27 +688,40 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             bgPaint.setColor(Color.argb(180, 33, 33, 33));
         }
 
-        float bgWidth = cellSize * 0.4f;
-        float bgHeight = cellSize * 0.3f;
-        float bgX = x + (cellSize - bgWidth) / 2;
-        float bgY = y + (cellSize - bgHeight) / 2;
-        float cornerRadius = cellSize * 0.08f;
+        float bgWidth = cellSize * 0.40f;
+        float bgHeight = cellSize * 0.30f;
+        float bgX = x + (cellSize - bgWidth) / 2f;
+        float bgY = y + (cellSize - bgHeight) / 2f;
+        float cornerRadius = Math.max(4f, cellSize * 0.08f);
 
+        // Sombra suave del rect
+        Paint bgShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bgShadowPaint.setColor(Color.argb(80, 0, 0, 0));
+        bgShadowPaint.setMaskFilter(new BlurMaskFilter(Math.max(1f, cellSize * 0.02f), BlurMaskFilter.Blur.NORMAL));
+        canvas.drawRoundRect(bgX + 2, bgY + 2, bgX + bgWidth + 2, bgY + bgHeight + 2, cornerRadius, cornerRadius, bgShadowPaint);
+
+        // Rect principal y borde
         canvas.drawRoundRect(bgX, bgY, bgX + bgWidth, bgY + bgHeight, cornerRadius, cornerRadius, bgPaint);
+        Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        borderPaint.setColor(Color.argb(100, 255, 255, 255));
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setStrokeWidth(Math.max(1f, cellSize * 0.015f));
+        canvas.drawRoundRect(bgX, bgY, bgX + bgWidth, bgY + bgHeight, cornerRadius, cornerRadius, borderPaint);
 
+        // Número
         Paint numberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         numberPaint.setColor(Color.WHITE);
-        numberPaint.setTextSize(cellSize * 0.32f);
+        numberPaint.setTextSize(Math.max(14f, cellSize * 0.32f));
         numberPaint.setTextAlign(Paint.Align.CENTER);
         numberPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
         numberPaint.setShadowLayer(6, 0, 3, Color.argb(200, 0, 0, 0));
 
         String numberText = String.valueOf(food.value);
-        float textCenterX = bgX + bgWidth / 2;
-        float textCenterY = bgY + bgHeight / 2;
+        float textCenterX = bgX + bgWidth / 2f;
+        float textCenterY = bgY + bgHeight / 2f;
         Paint.FontMetrics fm = numberPaint.getFontMetrics();
         float textHeight = fm.descent - fm.ascent;
-        float textY = textCenterY + (textHeight / 2) - fm.descent;
+        float textY = textCenterY + (textHeight / 2f) - fm.descent;
 
         canvas.drawText(numberText, textCenterX, textY, numberPaint);
     }
@@ -707,28 +729,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public void update() {
         if (gameOver) return;
 
+        // Parpadeo de estrellas
         for (Star s : stars) {
             float speed = 0.015f + (s.alpha * 0.01f);
             if (s.increasing) {
                 s.alpha += speed;
-                if (s.alpha >= 1f) {
-                    s.alpha = 1f;
-                    s.increasing = false;
-                }
+                if (s.alpha >= 1f) { s.alpha = 1f; s.increasing = false; }
             } else {
                 s.alpha -= speed;
-                if (s.alpha <= 0.3f) {
-                    s.alpha = 0.3f;
-                    s.increasing = true;
-                }
+                if (s.alpha <= 0.3f) { s.alpha = 0.3f; s.increasing = true; }
             }
         }
 
+        // Cambiar dirección pendiente si procede
         if (pendingDirection != null && !direction.isOpposite(pendingDirection)) {
             direction = pendingDirection;
             pendingDirection = null;
         }
 
+        // Nueva cabeza
         Point head = new Point(snake.get(0));
         switch (direction) {
             case UP: head.y -= 1; break;
@@ -737,9 +756,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             case RIGHT: head.x += 1; break;
         }
 
+        // Colisiones: Notificar Game Over a la Activity con el score (corrección para score)
         if (head.x < 0 || head.y < 0 || head.x >= numCells || head.y >= numCells || snakeContains(head)) {
             gameOver = true;
             playSound(loseSound, "lose");
+            if (gameEventListener != null) {
+                gameEventListener.onGameOver(score);
+            }
             return;
         }
 
@@ -748,6 +771,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         boolean foodEaten = false;
         boolean wrongFoodEaten = false;
 
+        // Comida correcta
         if (correctFood != null && head.equals(correctFood.position)) {
             score++;
             playSound(correctSound, "correct");
@@ -756,6 +780,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             foodEaten = true;
         }
 
+        // Comida incorrecta
         if (!foodEaten) {
             for (FoodItem f : wrongFoods) {
                 if (head.equals(f.position)) {
@@ -768,6 +793,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
+        // Bonus
         if (!foodEaten && !wrongFoodEaten && bonusFood != null && head.equals(bonusFood.position)) {
             score += bonusValue;
             playSound(bonusSound, "bonus");
@@ -776,6 +802,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             foodEaten = true;
         }
 
+        // Tamaño de serpiente según acción
         if (wrongFoodEaten) {
             if (snake.size() > 1) snake.remove(snake.size() - 1);
             if (snake.size() > 1) snake.remove(snake.size() - 1);
@@ -787,14 +814,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (gameOver && event.getAction() == MotionEvent.ACTION_UP) {
-            // NUEVO: Verificar si el toque fue en el botón Back to Menu
             if (backToMenuButton.contains(event.getX(), event.getY())) {
-                if (gameEventListener != null) {
-                    gameEventListener.onBackToMenuPressed();
-                }
+                if (gameEventListener != null) gameEventListener.onBackToMenuPressed();
                 return true;
             } else {
-                // Si no fue en el botón, reiniciar el juego
                 restartGame();
                 return true;
             }
@@ -833,20 +856,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             switch (keyCode) {
                 case KeyEvent.KEYCODE_DPAD_UP:
                 case KeyEvent.KEYCODE_W:
-                    pendingDirection = Direction.UP;
-                    return true;
+                    pendingDirection = Direction.UP; return true;
                 case KeyEvent.KEYCODE_DPAD_DOWN:
                 case KeyEvent.KEYCODE_S:
-                    pendingDirection = Direction.DOWN;
-                    return true;
+                    pendingDirection = Direction.DOWN; return true;
                 case KeyEvent.KEYCODE_DPAD_LEFT:
                 case KeyEvent.KEYCODE_A:
-                    pendingDirection = Direction.LEFT;
-                    return true;
+                    pendingDirection = Direction.LEFT; return true;
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
                 case KeyEvent.KEYCODE_D:
-                    pendingDirection = Direction.RIGHT;
-                    return true;
+                    pendingDirection = Direction.RIGHT; return true;
             }
         }
         return super.onKeyDown(keyCode, event);
