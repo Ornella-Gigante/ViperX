@@ -9,6 +9,11 @@ Welcome to **Maths Snake Adventure** — a fun, colorful, and educational Androi
 
 In Maths Snake Adventure, kids navigate a growing snake across a vibrant board, munching numbers that solve math problems. Each correct answer stretches the snake longer and boosts math skills, while wrong moves mean game over! With simple swipe controls and cheerful sounds, learning math has never been this fun.
 
+<div align="center">
+  <img src="https://github.com/Ornella-Gigante/ViperX/blob/main/viper1.png" width="350" alt="Gameplay Screenshot" style="display:inline-block; margin-right: 18px;"/>
+  <img src="https://github.com/Ornella-Gigante/ViperX/blob/main/viper2.png" width="350" alt="Start Screen Screenshot" style="display:inline-block; margin-left: 18px;"/>
+</div>
+
 ---
 
 ## 🎮 Game Structure
