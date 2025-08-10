@@ -17,6 +17,7 @@ import java.util.Random;
 public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     private GameThread thread;
+    private int highScore = 0;
     private List<Point> snake = new ArrayList<>();
     private Direction direction = Direction.RIGHT;
     private Direction pendingDirection = null;
@@ -230,6 +231,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private void updateTextViews() {
         // Método vacío - no se usan TextViews externos
     }
+
+    // NUEVO: Método para establecer el high score desde MainActivity
+    public void setHighScore(int highScore) {
+        this.highScore = highScore;
+    }
+
 
     public void restartGame() {
         snake.clear();
@@ -482,25 +489,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    // MODIFICADO: Área de pregunta MÁS ABAJO, CENTRADA y MÁS GRANDE
     private void drawQuestionArea(Canvas canvas) {
-        float questionAreaHeight = 320f; // MÁS GRANDE (era 280f)
-        float questionAreaWidth = canvas.getWidth() * 0.9f; // 90% del ancho (era 85%)
+        float questionAreaHeight = 320f;
+        float questionAreaWidth = canvas.getWidth() * 0.9f;
 
-        // Calcular posición centrada y MÁS ABAJO
         float centerX = canvas.getWidth() / 2f;
-        float centerY = questionAreaHeight / 2f + 120f; // MÁS ABAJO (era 40f)
+        float centerY = questionAreaHeight / 2f + 120f;
 
         float left = centerX - (questionAreaWidth / 2f);
         float top = centerY - (questionAreaHeight / 2f);
         float right = centerX + (questionAreaWidth / 2f);
         float bottom = centerY + (questionAreaHeight / 2f);
 
-        // Fondo opaco elegante - azul oscuro con más transparencia
+        // Fondo con gradiente
         Paint questionBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        questionBgPaint.setColor(Color.argb(250, 25, 35, 55)); // MÁS OPACO
-
-        // Gradiente más pronunciado
+        questionBgPaint.setColor(Color.argb(250, 25, 35, 55));
         LinearGradient gradient = new LinearGradient(
                 left, top, left, bottom,
                 new int[]{
@@ -515,14 +518,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         RectF rect = new RectF(left, top, right, bottom);
         canvas.drawRoundRect(rect, 35f, 35f, questionBgPaint);
 
-        // Borde elegante más grueso
+        // Bordes
         Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(8f); // MÁS GRUESO
+        borderPaint.setStrokeWidth(8f);
         borderPaint.setColor(Color.argb(240, 100, 150, 255));
         canvas.drawRoundRect(rect, 35f, 35f, borderPaint);
 
-        // Borde interno
         Paint innerBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         innerBorderPaint.setStyle(Paint.Style.STROKE);
         innerBorderPaint.setStrokeWidth(3f);
@@ -530,36 +532,48 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         RectF innerRect = new RectF(left + 4, top + 4, right - 4, bottom - 4);
         canvas.drawRoundRect(innerRect, 31f, 31f, innerBorderPaint);
 
-        // Texto de la pregunta MÁS GRANDE
+        // Texto de la pregunta
         Paint questionTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         questionTextPaint.setColor(Color.rgb(255, 255, 230));
-        questionTextPaint.setTextSize(64f); // MÁS GRANDE (era 58f)
+        questionTextPaint.setTextSize(64f);
         questionTextPaint.setTextAlign(Paint.Align.CENTER);
         questionTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
         questionTextPaint.setShadowLayer(10, 4, 4, Color.argb(220, 0, 0, 0));
 
         String questionText = "Q: " + questionA + " " + operation + " " + questionB + " = ?";
-        canvas.drawText(questionText, centerX, centerY - 40f, questionTextPaint);
+        canvas.drawText(questionText, centerX, centerY - 60f, questionTextPaint);
 
-        // Línea separadora decorativa
+        // Línea separadora
         Paint separatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         separatorPaint.setColor(Color.argb(180, 100, 150, 255));
         separatorPaint.setStrokeWidth(4f);
         float separatorLeft = centerX - (questionAreaWidth * 0.35f);
         float separatorRight = centerX + (questionAreaWidth * 0.35f);
-        canvas.drawLine(separatorLeft, centerY + 15f, separatorRight, centerY + 15f, separatorPaint);
+        canvas.drawLine(separatorLeft, centerY - 10f, separatorRight, centerY - 10f, separatorPaint);
 
-        // Texto del score MÁS GRANDE
+        // NUEVO: Score actual y high score en la misma línea
         Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         scorePaint.setColor(Color.rgb(180, 255, 180));
-        scorePaint.setTextSize(48f); // MÁS GRANDE (era 42f)
+        scorePaint.setTextSize(40f);
         scorePaint.setTextAlign(Paint.Align.CENTER);
         scorePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
         scorePaint.setShadowLayer(8, 3, 3, Color.argb(200, 0, 0, 0));
 
-        canvas.drawText("Score: " + score, centerX, centerY + 65f, scorePaint);
+        // Score actual (lado izquierdo)
+        scorePaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText("Score: " + score, centerX - (questionAreaWidth * 0.3f), centerY + 40f, scorePaint);
 
-        // Efectos decorativos mejorados
+        // High Score (lado derecho)
+        Paint highScorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        highScorePaint.setColor(Color.rgb(255, 215, 0)); // Dorado para high score
+        highScorePaint.setTextSize(40f);
+        highScorePaint.setTextAlign(Paint.Align.RIGHT);
+        highScorePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        highScorePaint.setShadowLayer(8, 3, 3, Color.argb(200, 0, 0, 0));
+
+        canvas.drawText("Best: " + highScore, centerX + (questionAreaWidth * 0.3f), centerY + 40f, highScorePaint);
+
+        // Efectos decorativos
         Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         glowPaint.setColor(Color.argb(60, 255, 255, 255));
         glowPaint.setStyle(Paint.Style.STROKE);
@@ -567,15 +581,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         RectF glowRect = new RectF(left + 2, top + 2, right - 2, bottom - 2);
         canvas.drawRoundRect(glowRect, 33f, 33f, glowPaint);
 
-        // Puntos decorativos en las esquinas MÁS GRANDES
+        // Puntos decorativos en las esquinas
         Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         dotPaint.setColor(Color.argb(200, 150, 200, 255));
-        float dotSize = 12f; // MÁS GRANDES
+        float dotSize = 12f;
         canvas.drawCircle(left + 30f, top + 30f, dotSize, dotPaint);
         canvas.drawCircle(right - 30f, top + 30f, dotSize, dotPaint);
         canvas.drawCircle(left + 30f, bottom - 30f, dotSize, dotPaint);
         canvas.drawCircle(right - 30f, bottom - 30f, dotSize, dotPaint);
     }
+
 
     // NUEVO: Dibujar botón Back to Menu
     private void drawBackToMenuButton(Canvas canvas) {

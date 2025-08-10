@@ -193,20 +193,23 @@ public class MainActivity extends Activity {
     }
 
     private void showGameLayer() {
-        // ✅ CONFIGURAR el listener del GameView ANTES de mostrar el juego
+        // Configurar el listener del GameView
         gameView.setGameEventListener(new GameView.GameEventListener() {
             @Override
             public void onBackToMenuPressed() {
-                showMenu(); // Regresar al menú principal
+                showMenu();
             }
         });
+
+        // NUEVO: Pasar el high score al GameView
+        gameView.setHighScore(highScore);
 
         // Cambiar visibilidad
         gameLayer.setVisibility(View.VISIBLE);
         menuLayer.setVisibility(View.GONE);
         instructionsLayer.setVisibility(View.GONE);
 
-        // ✅ SOLICITAR FOCO explícitamente
+        // Solicitar foco
         gameView.post(new Runnable() {
             @Override
             public void run() {
@@ -219,6 +222,7 @@ public class MainActivity extends Activity {
         gameView.restartGame();
         gameView.resume();
     }
+
 
 
     @Override
