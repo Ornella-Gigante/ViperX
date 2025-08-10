@@ -468,55 +468,100 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    // NUEVO: Área de pregunta MÁS GRANDE sobre las estrellas
+    // NUEVO: Área de pregunta CENTRADA, MÁS GRANDE y con mejor fondo
     private void drawQuestionArea(Canvas canvas) {
-        float questionAreaHeight = 200f;
-        float padding = 15f;
+        float questionAreaHeight = 280f; // Más grande
+        float questionAreaWidth = canvas.getWidth() * 0.85f; // 85% del ancho de pantalla
+        float padding = 20f;
 
-        // Fondo opaco pero discreto - azul grisáceo sutil
+        // Calcular posición centrada
+        float centerX = canvas.getWidth() / 2f;
+        float centerY = questionAreaHeight / 2f + 40f; // Un poco más abajo del top
+
+        float left = centerX - (questionAreaWidth / 2f);
+        float top = centerY - (questionAreaHeight / 2f);
+        float right = centerX + (questionAreaWidth / 2f);
+        float bottom = centerY + (questionAreaHeight / 2f);
+
+        // Fondo opaco pero elegante - azul oscuro con transparencia
         Paint questionBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        questionBgPaint.setColor(Color.argb(220, 35, 45, 65));
+        questionBgPaint.setColor(Color.argb(240, 25, 35, 55)); // Más opaco pero discreto
 
-        RectF rect = new RectF(padding, padding, canvas.getWidth() - padding, questionAreaHeight);
-        canvas.drawRoundRect(rect, 25f, 25f, questionBgPaint);
+        // Añadir un degradado sutil
+        LinearGradient gradient = new LinearGradient(
+                left, top, left, bottom,
+                new int[]{
+                        Color.argb(240, 30, 40, 60),
+                        Color.argb(240, 20, 30, 50)
+                },
+                null,
+                Shader.TileMode.CLAMP
+        );
+        questionBgPaint.setShader(gradient);
 
-        // Borde elegante más grueso
+        RectF rect = new RectF(left, top, right, bottom);
+        canvas.drawRoundRect(rect, 30f, 30f, questionBgPaint);
+
+        // Borde elegante con gradiente
         Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(5f);
-        borderPaint.setColor(Color.argb(180, 130, 180, 255));
-        canvas.drawRoundRect(rect, 25f, 25f, borderPaint);
+        borderPaint.setStrokeWidth(6f);
+        borderPaint.setColor(Color.argb(220, 100, 150, 255));
+        canvas.drawRoundRect(rect, 30f, 30f, borderPaint);
 
-        // Texto de la pregunta MÁS GRANDE
+        // Borde interno más sutil
+        Paint innerBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        innerBorderPaint.setStyle(Paint.Style.STROKE);
+        innerBorderPaint.setStrokeWidth(2f);
+        innerBorderPaint.setColor(Color.argb(120, 180, 200, 255));
+        RectF innerRect = new RectF(left + 3, top + 3, right - 3, bottom - 3);
+        canvas.drawRoundRect(innerRect, 27f, 27f, innerBorderPaint);
+
+        // Texto de la pregunta MÁS GRANDE y centrado
         Paint questionTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        questionTextPaint.setColor(Color.rgb(255, 255, 220));
-        questionTextPaint.setTextSize(52f);
+        questionTextPaint.setColor(Color.rgb(255, 255, 230));
+        questionTextPaint.setTextSize(58f); // Más grande
         questionTextPaint.setTextAlign(Paint.Align.CENTER);
         questionTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        questionTextPaint.setShadowLayer(6, 2, 2, Color.BLACK);
+        questionTextPaint.setShadowLayer(8, 3, 3, Color.argb(200, 0, 0, 0));
 
         String questionText = "Q: " + questionA + " " + operation + " " + questionB + " = ?";
-        canvas.drawText(questionText, canvas.getWidth() / 2, (questionAreaHeight / 2) + 20, questionTextPaint);
+        canvas.drawText(questionText, centerX, centerY - 30f, questionTextPaint);
 
-        // Texto del score MÁS GRANDE
+        // Línea separadora decorativa
+        Paint separatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        separatorPaint.setColor(Color.argb(150, 100, 150, 255));
+        separatorPaint.setStrokeWidth(3f);
+        float separatorLeft = centerX - (questionAreaWidth * 0.3f);
+        float separatorRight = centerX + (questionAreaWidth * 0.3f);
+        canvas.drawLine(separatorLeft, centerY + 10f, separatorRight, centerY + 10f, separatorPaint);
+
+        // Texto del score MÁS GRANDE y centrado
         Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         scorePaint.setColor(Color.rgb(180, 255, 180));
-        scorePaint.setTextSize(36f);
+        scorePaint.setTextSize(42f); // Más grande
         scorePaint.setTextAlign(Paint.Align.CENTER);
         scorePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        scorePaint.setShadowLayer(4, 1, 1, Color.BLACK);
+        scorePaint.setShadowLayer(6, 2, 2, Color.argb(180, 0, 0, 0));
 
-        canvas.drawText("Score: " + score, canvas.getWidth() / 2, questionAreaHeight - 35, scorePaint);
+        canvas.drawText("Score: " + score, centerX, centerY + 50f, scorePaint);
 
-        // Efecto de brillo sutil
+        // Efecto de brillo superior
         Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        glowPaint.setColor(Color.argb(60, 255, 255, 255));
+        glowPaint.setColor(Color.argb(40, 255, 255, 255));
         glowPaint.setStyle(Paint.Style.STROKE);
-        glowPaint.setStrokeWidth(2f);
-        canvas.drawRoundRect(
-                padding + 2, padding + 2,
-                canvas.getWidth() - padding - 2, questionAreaHeight - 2,
-                23f, 23f, glowPaint);
+        glowPaint.setStrokeWidth(1f);
+        RectF glowRect = new RectF(left + 1, top + 1, right - 1, bottom - 1);
+        canvas.drawRoundRect(glowRect, 29f, 29f, glowPaint);
+
+        // Puntos decorativos en las esquinas
+        Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        dotPaint.setColor(Color.argb(180, 150, 200, 255));
+        float dotSize = 8f;
+        canvas.drawCircle(left + 25f, top + 25f, dotSize, dotPaint);
+        canvas.drawCircle(right - 25f, top + 25f, dotSize, dotPaint);
+        canvas.drawCircle(left + 25f, bottom - 25f, dotSize, dotPaint);
+        canvas.drawCircle(right - 25f, bottom - 25f, dotSize, dotPaint);
     }
 
     private void drawFood(Canvas canvas, FoodItem food, int offsetX, int offsetY, int cellSize) {
