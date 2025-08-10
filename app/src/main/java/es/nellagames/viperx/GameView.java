@@ -31,7 +31,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private int bonusValue = 5;
     private final long gameSpeed = 1200;
 
-    // ELIMINADO: TextViews externos para evitar duplicación
     private TextView questionTextView;
     private TextView scoreTextView;
 
@@ -45,6 +44,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap apple, candy, sushi1, sushi2;
     private Bitmap[] foodBitmaps;
     private Bitmap gridBackground;
+
+    // NUEVO: Interfaz para comunicar con la Activity
+    public interface GameEventListener {
+        void onBackToMenuPressed();
+    }
+    private GameEventListener gameEventListener;
+
+    // NUEVO: Rectángulo del botón Back to Menu
+    private RectF backToMenuButton = new RectF();
 
     private class FoodItem {
         Point position;
@@ -93,6 +101,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             s.increasing = rand.nextBoolean();
             stars.add(s);
         }
+    }
+
+    // NUEVO: Método para establecer el listener
+    public void setGameEventListener(GameEventListener listener) {
+        this.gameEventListener = listener;
     }
 
     @Override
@@ -209,9 +222,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         return bitmap;
     }
 
-    // ELIMINADO: setTextViews y updateTextViews para evitar duplicación
     public void setTextViews(TextView questionText, TextView scoreText) {
-        // Anular referencias para evitar el cuadro duplicado
         this.questionTextView = null;
         this.scoreTextView = null;
     }
@@ -314,17 +325,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             canvas.drawCircle(s.x, s.y, starSize, starPaint);
         }
 
-        // NUEVO: Dibujar área de pregunta SOBRE las estrellas
+        // MODIFICADO: Área de pregunta MÁS ABAJO, CENTRADA y MÁS GRANDE
         drawQuestionArea(canvas);
 
-        // Calcular dimensiones de cuadrícula (ajustada para dar espacio al cuadro)
+        // Calcular dimensiones de cuadrícula (ajustada para el cuadro más abajo)
         int availableWidth = canvas.getWidth() - 32;
-        int availableHeight = canvas.getHeight() - 220; // Espacio para el cuadro
+        int availableHeight = canvas.getHeight() - 380; // Más espacio para el cuadro más grande
         int cellSizeDynamic = Math.min(availableWidth / numCells, availableHeight / numCells);
         int gridWidth = cellSizeDynamic * numCells;
         int gridHeight = cellSizeDynamic * numCells;
         int offsetX = (canvas.getWidth() - gridWidth) / 2;
-        int offsetY = ((canvas.getHeight() - gridHeight) / 2) + 110; // Mover hacia abajo
+        int offsetY = ((canvas.getHeight() - gridHeight) / 2) + 190; // Mover más hacia abajo
 
         if (gridBackground != null) {
             Bitmap scaledGrid = Bitmap.createScaledBitmap(gridBackground, gridWidth, gridHeight, false);
@@ -385,7 +396,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         for (FoodItem wf : wrongFoods) drawFood(canvas, wf, offsetX, offsetY, cellSizeDynamic);
         if (bonusFood != null) drawFood(canvas, bonusFood, offsetX, offsetY, cellSizeDynamic);
 
-        // GAME OVER (igual que tu archivo)
+        // GAME OVER con botón de Back to Menu
         if (gameOver) {
             Paint overlayPaint = new Paint();
             overlayPaint.setColor(Color.argb(220, 10, 15, 30));
@@ -450,12 +461,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             restartPaint.setAlpha((int) (255 * pulse));
             canvas.drawText("🎮 TAP TO RESTART 🎮", getWidth() / 2, getHeight() / 2 + 120, restartPaint);
 
+            // NUEVO: Botón Back to Menu
+            drawBackToMenuButton(canvas);
+
             Paint decorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             decorPaint.setColor(Color.rgb(100, 150, 255));
             decorPaint.setStrokeWidth(4f);
             decorPaint.setPathEffect(new DashPathEffect(new float[]{10, 5}, 0));
             canvas.drawLine(50, getHeight() / 2 - 180, getWidth() - 50, getHeight() / 2 - 180, decorPaint);
-            canvas.drawLine(50, getHeight() / 2 + 210, getWidth() - 50, getHeight() / 2 + 210, decorPaint);
+            canvas.drawLine(50, getHeight() / 2 + 280, getWidth() - 50, getHeight() / 2 + 280, decorPaint);
 
             Paint starDecorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             starDecorPaint.setColor(Color.rgb(255, 215, 0));
@@ -463,36 +477,35 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             starDecorPaint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText("⭐", getWidth() / 2 - 150, getHeight() / 2 - 120, starDecorPaint);
             canvas.drawText("⭐", getWidth() / 2 + 150, getHeight() / 2 - 120, starDecorPaint);
-            canvas.drawText("⭐", getWidth() / 2 - 120, getHeight() / 2 + 160, starDecorPaint);
-            canvas.drawText("⭐", getWidth() / 2 + 120, getHeight() / 2 + 160, starDecorPaint);
+            canvas.drawText("⭐", getWidth() / 2 - 120, getHeight() / 2 + 230, starDecorPaint);
+            canvas.drawText("⭐", getWidth() / 2 + 120, getHeight() / 2 + 230, starDecorPaint);
         }
     }
 
-    // NUEVO: Área de pregunta CENTRADA, MÁS GRANDE y con mejor fondo
+    // MODIFICADO: Área de pregunta MÁS ABAJO, CENTRADA y MÁS GRANDE
     private void drawQuestionArea(Canvas canvas) {
-        float questionAreaHeight = 280f; // Más grande
-        float questionAreaWidth = canvas.getWidth() * 0.85f; // 85% del ancho de pantalla
-        float padding = 20f;
+        float questionAreaHeight = 320f; // MÁS GRANDE (era 280f)
+        float questionAreaWidth = canvas.getWidth() * 0.9f; // 90% del ancho (era 85%)
 
-        // Calcular posición centrada
+        // Calcular posición centrada y MÁS ABAJO
         float centerX = canvas.getWidth() / 2f;
-        float centerY = questionAreaHeight / 2f + 40f; // Un poco más abajo del top
+        float centerY = questionAreaHeight / 2f + 120f; // MÁS ABAJO (era 40f)
 
         float left = centerX - (questionAreaWidth / 2f);
         float top = centerY - (questionAreaHeight / 2f);
         float right = centerX + (questionAreaWidth / 2f);
         float bottom = centerY + (questionAreaHeight / 2f);
 
-        // Fondo opaco pero elegante - azul oscuro con transparencia
+        // Fondo opaco elegante - azul oscuro con más transparencia
         Paint questionBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        questionBgPaint.setColor(Color.argb(240, 25, 35, 55)); // Más opaco pero discreto
+        questionBgPaint.setColor(Color.argb(250, 25, 35, 55)); // MÁS OPACO
 
-        // Añadir un degradado sutil
+        // Gradiente más pronunciado
         LinearGradient gradient = new LinearGradient(
                 left, top, left, bottom,
                 new int[]{
-                        Color.argb(240, 30, 40, 60),
-                        Color.argb(240, 20, 30, 50)
+                        Color.argb(250, 35, 45, 65),
+                        Color.argb(250, 20, 30, 50)
                 },
                 null,
                 Shader.TileMode.CLAMP
@@ -500,68 +513,125 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         questionBgPaint.setShader(gradient);
 
         RectF rect = new RectF(left, top, right, bottom);
-        canvas.drawRoundRect(rect, 30f, 30f, questionBgPaint);
+        canvas.drawRoundRect(rect, 35f, 35f, questionBgPaint);
 
-        // Borde elegante con gradiente
+        // Borde elegante más grueso
         Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(6f);
-        borderPaint.setColor(Color.argb(220, 100, 150, 255));
-        canvas.drawRoundRect(rect, 30f, 30f, borderPaint);
+        borderPaint.setStrokeWidth(8f); // MÁS GRUESO
+        borderPaint.setColor(Color.argb(240, 100, 150, 255));
+        canvas.drawRoundRect(rect, 35f, 35f, borderPaint);
 
-        // Borde interno más sutil
+        // Borde interno
         Paint innerBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         innerBorderPaint.setStyle(Paint.Style.STROKE);
-        innerBorderPaint.setStrokeWidth(2f);
-        innerBorderPaint.setColor(Color.argb(120, 180, 200, 255));
-        RectF innerRect = new RectF(left + 3, top + 3, right - 3, bottom - 3);
-        canvas.drawRoundRect(innerRect, 27f, 27f, innerBorderPaint);
+        innerBorderPaint.setStrokeWidth(3f);
+        innerBorderPaint.setColor(Color.argb(150, 180, 200, 255));
+        RectF innerRect = new RectF(left + 4, top + 4, right - 4, bottom - 4);
+        canvas.drawRoundRect(innerRect, 31f, 31f, innerBorderPaint);
 
-        // Texto de la pregunta MÁS GRANDE y centrado
+        // Texto de la pregunta MÁS GRANDE
         Paint questionTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         questionTextPaint.setColor(Color.rgb(255, 255, 230));
-        questionTextPaint.setTextSize(58f); // Más grande
+        questionTextPaint.setTextSize(64f); // MÁS GRANDE (era 58f)
         questionTextPaint.setTextAlign(Paint.Align.CENTER);
         questionTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        questionTextPaint.setShadowLayer(8, 3, 3, Color.argb(200, 0, 0, 0));
+        questionTextPaint.setShadowLayer(10, 4, 4, Color.argb(220, 0, 0, 0));
 
         String questionText = "Q: " + questionA + " " + operation + " " + questionB + " = ?";
-        canvas.drawText(questionText, centerX, centerY - 30f, questionTextPaint);
+        canvas.drawText(questionText, centerX, centerY - 40f, questionTextPaint);
 
         // Línea separadora decorativa
         Paint separatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        separatorPaint.setColor(Color.argb(150, 100, 150, 255));
-        separatorPaint.setStrokeWidth(3f);
-        float separatorLeft = centerX - (questionAreaWidth * 0.3f);
-        float separatorRight = centerX + (questionAreaWidth * 0.3f);
-        canvas.drawLine(separatorLeft, centerY + 10f, separatorRight, centerY + 10f, separatorPaint);
+        separatorPaint.setColor(Color.argb(180, 100, 150, 255));
+        separatorPaint.setStrokeWidth(4f);
+        float separatorLeft = centerX - (questionAreaWidth * 0.35f);
+        float separatorRight = centerX + (questionAreaWidth * 0.35f);
+        canvas.drawLine(separatorLeft, centerY + 15f, separatorRight, centerY + 15f, separatorPaint);
 
-        // Texto del score MÁS GRANDE y centrado
+        // Texto del score MÁS GRANDE
         Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         scorePaint.setColor(Color.rgb(180, 255, 180));
-        scorePaint.setTextSize(42f); // Más grande
+        scorePaint.setTextSize(48f); // MÁS GRANDE (era 42f)
         scorePaint.setTextAlign(Paint.Align.CENTER);
         scorePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        scorePaint.setShadowLayer(6, 2, 2, Color.argb(180, 0, 0, 0));
+        scorePaint.setShadowLayer(8, 3, 3, Color.argb(200, 0, 0, 0));
 
-        canvas.drawText("Score: " + score, centerX, centerY + 50f, scorePaint);
+        canvas.drawText("Score: " + score, centerX, centerY + 65f, scorePaint);
 
-        // Efecto de brillo superior
+        // Efectos decorativos mejorados
+        Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        glowPaint.setColor(Color.argb(60, 255, 255, 255));
+        glowPaint.setStyle(Paint.Style.STROKE);
+        glowPaint.setStrokeWidth(2f);
+        RectF glowRect = new RectF(left + 2, top + 2, right - 2, bottom - 2);
+        canvas.drawRoundRect(glowRect, 33f, 33f, glowPaint);
+
+        // Puntos decorativos en las esquinas MÁS GRANDES
+        Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        dotPaint.setColor(Color.argb(200, 150, 200, 255));
+        float dotSize = 12f; // MÁS GRANDES
+        canvas.drawCircle(left + 30f, top + 30f, dotSize, dotPaint);
+        canvas.drawCircle(right - 30f, top + 30f, dotSize, dotPaint);
+        canvas.drawCircle(left + 30f, bottom - 30f, dotSize, dotPaint);
+        canvas.drawCircle(right - 30f, bottom - 30f, dotSize, dotPaint);
+    }
+
+    // NUEVO: Dibujar botón Back to Menu
+    private void drawBackToMenuButton(Canvas canvas) {
+        float buttonWidth = canvas.getWidth() * 0.6f; // 60% del ancho
+        float buttonHeight = 70f;
+        float buttonLeft = (canvas.getWidth() - buttonWidth) / 2f;
+        float buttonTop = (canvas.getHeight() / 2f) + 190f; // Debajo del texto de restart
+
+        // Actualizar rectángulo del botón para detección de toque
+        backToMenuButton.set(buttonLeft, buttonTop, buttonLeft + buttonWidth, buttonTop + buttonHeight);
+
+        // Fondo del botón con gradiente
+        Paint buttonBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        LinearGradient buttonGradient = new LinearGradient(
+                buttonLeft, buttonTop, buttonLeft, buttonTop + buttonHeight,
+                new int[]{
+                        Color.argb(255, 70, 130, 180),
+                        Color.argb(255, 50, 100, 150)
+                },
+                null,
+                Shader.TileMode.CLAMP
+        );
+        buttonBgPaint.setShader(buttonGradient);
+        canvas.drawRoundRect(backToMenuButton, 25f, 25f, buttonBgPaint);
+
+        // Borde del botón
+        Paint buttonBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        buttonBorderPaint.setStyle(Paint.Style.STROKE);
+        buttonBorderPaint.setStrokeWidth(4f);
+        buttonBorderPaint.setColor(Color.argb(255, 100, 150, 200));
+        canvas.drawRoundRect(backToMenuButton, 25f, 25f, buttonBorderPaint);
+
+        // Texto del botón
+        Paint buttonTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        buttonTextPaint.setColor(Color.WHITE);
+        buttonTextPaint.setTextSize(38f);
+        buttonTextPaint.setTextAlign(Paint.Align.CENTER);
+        buttonTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        buttonTextPaint.setShadowLayer(4, 2, 2, Color.argb(150, 0, 0, 0));
+
+        float textX = backToMenuButton.centerX();
+        float textY = backToMenuButton.centerY() + (buttonTextPaint.getTextSize() / 3f);
+        canvas.drawText("🏠 BACK TO MENU", textX, textY, buttonTextPaint);
+
+        // Efecto de brillo en el botón
         Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         glowPaint.setColor(Color.argb(40, 255, 255, 255));
         glowPaint.setStyle(Paint.Style.STROKE);
-        glowPaint.setStrokeWidth(1f);
-        RectF glowRect = new RectF(left + 1, top + 1, right - 1, bottom - 1);
-        canvas.drawRoundRect(glowRect, 29f, 29f, glowPaint);
-
-        // Puntos decorativos en las esquinas
-        Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        dotPaint.setColor(Color.argb(180, 150, 200, 255));
-        float dotSize = 8f;
-        canvas.drawCircle(left + 25f, top + 25f, dotSize, dotPaint);
-        canvas.drawCircle(right - 25f, top + 25f, dotSize, dotPaint);
-        canvas.drawCircle(left + 25f, bottom - 25f, dotSize, dotPaint);
-        canvas.drawCircle(right - 25f, bottom - 25f, dotSize, dotPaint);
+        glowPaint.setStrokeWidth(2f);
+        RectF glowRect = new RectF(
+                backToMenuButton.left + 2,
+                backToMenuButton.top + 2,
+                backToMenuButton.right - 2,
+                backToMenuButton.bottom - 2
+        );
+        canvas.drawRoundRect(glowRect, 23f, 23f, glowPaint);
     }
 
     private void drawFood(Canvas canvas, FoodItem food, int offsetX, int offsetY, int cellSize) {
@@ -575,7 +645,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         Bitmap scaledFood = Bitmap.createScaledBitmap(food.bitmap, foodSize, foodSize, true);
 
-        // Sombra que coincide con la forma de la comida
         Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         shadowPaint.setColorFilter(new ColorMatrixColorFilter(new ColorMatrix(new float[]{
                 0, 0, 0, 0, 0,
@@ -703,9 +772,19 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (gameOver && event.getAction() == MotionEvent.ACTION_UP) {
-            restartGame();
-            return true;
+            // NUEVO: Verificar si el toque fue en el botón Back to Menu
+            if (backToMenuButton.contains(event.getX(), event.getY())) {
+                if (gameEventListener != null) {
+                    gameEventListener.onBackToMenuPressed();
+                }
+                return true;
+            } else {
+                // Si no fue en el botón, reiniciar el juego
+                restartGame();
+                return true;
+            }
         }
+
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 startX = event.getX();
