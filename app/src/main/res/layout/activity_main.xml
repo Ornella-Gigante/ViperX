@@ -28,34 +28,7 @@
             android:paddingTop="8dp"
             android:paddingBottom="16dp">
 
-            <!-- Panel superior con información del juego -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/game_panel_background"
-                android:padding="16dp"
-                android:layout_marginBottom="8dp"
-                android:elevation="4dp">
 
-                <TextView
-                    android:id="@+id/questionText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Q: 8 + 7 = ?"
-                    android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:textColor="#2196F3"
-                    android:layout_marginBottom="8dp" />
-
-                <TextView
-                    android:id="@+id/scoreText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Score: 0"
-                    android:textSize="20sp"
-                    android:textColor="#323232" />
-            </LinearLayout>
 
             <!-- GameView con fondo transparente -->
             <es.nellagames.viperx.GameView

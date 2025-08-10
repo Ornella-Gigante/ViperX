@@ -131,13 +131,8 @@ public class MainActivity extends Activity {
     }
 
     private void showGameLayer() {
-        // Conectar los TextViews con el GameView
-        TextView questionText = findViewById(R.id.questionText);
-        TextView scoreText = findViewById(R.id.scoreText);
-
-        if (questionText != null && scoreText != null) {
-            gameView.setTextViews(questionText, scoreText);
-        }
+        // CORREGIDO: Ya no intentar conectar TextViews que no existen
+        // El GameView ahora maneja la UI internamente con drawQuestionArea()
 
         // Cambiar visibilidad
         gameLayer.setVisibility(View.VISIBLE);
