@@ -27,7 +27,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private boolean gameOver = false;
     private final int numCells = 10;
     private float startX, startY;
-    
+
 
     private int bonusValue = 5;
 
@@ -481,26 +481,113 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         for (FoodItem wf : wrongFoods) drawFood(canvas, wf, offsetX, offsetY, cellSizeDynamic);
         if (bonusFood != null) drawFood(canvas, bonusFood, offsetX, offsetY, cellSizeDynamic);
 
-        // GAME OVER overlay con mejor estilo
+        // GAME OVER overlay con diseño mejorado y más grande
         if (gameOver) {
-            // Overlay más suave
+            // Overlay más elegante con gradiente
             Paint overlayPaint = new Paint();
-            overlayPaint.setColor(Color.argb(200, 15, 25, 45)); // Mismo color base pero transparente
+            overlayPaint.setColor(Color.argb(220, 10, 15, 30)); // Más oscuro y opaco
             canvas.drawRect(0, 0, getWidth(), getHeight(), overlayPaint);
 
-            Paint overPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            overPaint.setColor(Color.rgb(255, 255, 200)); // Amarillo claro como las estrellas brillantes
-            overPaint.setTextSize(60f);
-            overPaint.setFakeBoldText(true);
-            overPaint.setTextAlign(Paint.Align.CENTER);
-            overPaint.setShadowLayer(6, 2, 2, Color.BLACK);
-            canvas.drawText("GAME OVER", getWidth() / 2, getHeight() / 2 - 50, overPaint);
+            // Añadir efecto de resplandor alrededor del texto
+            Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            glowPaint.setColor(Color.argb(100, 255, 100, 100)); // Resplandor rojizo
+            glowPaint.setTextSize(90f);
+            glowPaint.setFakeBoldText(true);
+            glowPaint.setTextAlign(Paint.Align.CENTER);
+            glowPaint.setMaskFilter(new BlurMaskFilter(15, BlurMaskFilter.Blur.NORMAL));
 
-            overPaint.setTextSize(40f);
-            overPaint.setColor(Color.rgb(220, 220, 255)); // Azul claro
-            canvas.drawText("Tap to Restart", getWidth() / 2, getHeight() / 2 + 50, overPaint);
+            // Dibujar resplandor del texto principal
+            canvas.drawText("GAME OVER", getWidth() / 2, getHeight() / 2 - 80, glowPaint);
+
+            // Texto principal "GAME OVER" más grande y estilizado
+            Paint gameOverPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            gameOverPaint.setColor(Color.rgb(255, 80, 80)); // Rojo más vibrante
+            gameOverPaint.setTextSize(85f); // Más grande
+            gameOverPaint.setFakeBoldText(true);
+            gameOverPaint.setTextAlign(Paint.Align.CENTER);
+            gameOverPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+
+            // Sombra más pronunciada
+            gameOverPaint.setShadowLayer(8, 4, 4, Color.argb(200, 0, 0, 0));
+
+            // Añadir borde al texto para mayor contraste
+            Paint borderPaint = new Paint(gameOverPaint);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(6f);
+            borderPaint.setColor(Color.rgb(120, 20, 20)); // Borde rojo oscuro
+
+            // Dibujar borde del texto
+            canvas.drawText("GAME OVER", getWidth() / 2, getHeight() / 2 - 80, borderPaint);
+            // Dibujar texto principal
+            canvas.drawText("GAME OVER", getWidth() / 2, getHeight() / 2 - 80, gameOverPaint);
+
+            // Panel de información del score con fondo
+            Paint scorePanelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            scorePanelPaint.setColor(Color.argb(180, 20, 30, 50)); // Fondo semi-transparente
+            float panelWidth = 300f;
+            float panelHeight = 80f;
+            float panelX = (getWidth() - panelWidth) / 2;
+            float panelY = getHeight() / 2 - 20;
+
+            // Dibujar panel con esquinas redondeadas
+            canvas.drawRoundRect(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 20f, 20f, scorePanelPaint);
+
+            // Borde del panel
+            Paint panelBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            panelBorderPaint.setStyle(Paint.Style.STROKE);
+            panelBorderPaint.setStrokeWidth(3f);
+            panelBorderPaint.setColor(Color.rgb(100, 150, 255));
+            canvas.drawRoundRect(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 20f, 20f, panelBorderPaint);
+
+            // Texto del score final
+            Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            scorePaint.setColor(Color.rgb(255, 255, 150)); // Amarillo dorado
+            scorePaint.setTextSize(36f);
+            scorePaint.setTextAlign(Paint.Align.CENTER);
+            scorePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            scorePaint.setShadowLayer(4, 2, 2, Color.BLACK);
+
+            canvas.drawText("Final Score: " + score, getWidth() / 2, getHeight() / 2 + 25, scorePaint);
+
+            // Texto de reinicio más atractivo
+            Paint restartPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            restartPaint.setColor(Color.rgb(150, 255, 150)); // Verde claro
+            restartPaint.setTextSize(32f);
+            restartPaint.setTextAlign(Paint.Align.CENTER);
+            restartPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            restartPaint.setShadowLayer(4, 2, 2, Color.BLACK);
+
+            // Efecto pulsante para el texto de reinicio
+            long time = System.currentTimeMillis();
+            float pulse = (float) (0.8f + 0.2f * Math.sin(time * 0.005f)); // Pulsación suave
+            restartPaint.setAlpha((int) (255 * pulse));
+
+            canvas.drawText("🎮 TAP TO RESTART 🎮", getWidth() / 2, getHeight() / 2 + 120, restartPaint);
+
+            // Añadir decoraciones laterales (líneas estilizadas)
+            Paint decorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            decorPaint.setColor(Color.rgb(100, 150, 255));
+            decorPaint.setStrokeWidth(4f);
+            decorPaint.setPathEffect(new DashPathEffect(new float[]{10, 5}, 0));
+
+            // Líneas decorativas horizontales
+            canvas.drawLine(50, getHeight() / 2 - 150, getWidth() - 50, getHeight() / 2 - 150, decorPaint);
+            canvas.drawLine(50, getHeight() / 2 + 180, getWidth() - 50, getHeight() / 2 + 180, decorPaint);
+
+            // Añadir pequeñas estrellas decorativas alrededor
+            Paint starDecorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            starDecorPaint.setColor(Color.rgb(255, 215, 0)); // Oro
+            starDecorPaint.setTextSize(24f);
+            starDecorPaint.setTextAlign(Paint.Align.CENTER);
+
+            // Estrellas en las esquinas del área de Game Over
+            canvas.drawText("⭐", getWidth() / 2 - 150, getHeight() / 2 - 120, starDecorPaint);
+            canvas.drawText("⭐", getWidth() / 2 + 150, getHeight() / 2 - 120, starDecorPaint);
+            canvas.drawText("⭐", getWidth() / 2 - 120, getHeight() / 2 + 160, starDecorPaint);
+            canvas.drawText("⭐", getWidth() / 2 + 120, getHeight() / 2 + 160, starDecorPaint);
         }
     }
+
     private void drawFood(Canvas canvas, FoodItem food, int offsetX, int offsetY, int cellSize) {
         if (food == null) return;
 
