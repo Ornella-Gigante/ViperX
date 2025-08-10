@@ -11,7 +11,7 @@ In Maths Snake Adventure, kids navigate a growing snake across a vibrant board, 
 
 <div align="center">
   <img src="https://github.com/Ornella-Gigante/ViperX/blob/main/viper1.png" width="350" alt="Gameplay Screenshot" style="display:inline-block; margin-right: 18px;"/>
-  <img src="https://github.com/Ornella-Gigante/ViperX/blob/main/viper1.png" width="350" alt="Start Screen Screenshot" style="display:inline-block; margin-left: 18px;"/>
+  <img src="https://github.com/Ornella-Gigante/ViperX/blob/main/viper2.png" width="350" alt="Start Screen Screenshot" style="display:inline-block; margin-left: 18px;"/>
 </div>
 
 ---
