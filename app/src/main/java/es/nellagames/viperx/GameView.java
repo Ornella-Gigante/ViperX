@@ -571,8 +571,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             decorPaint.setPathEffect(new DashPathEffect(new float[]{10, 5}, 0));
 
             // Líneas decorativas horizontales
-            canvas.drawLine(50, getHeight() / 2 - 150, getWidth() - 50, getHeight() / 2 - 150, decorPaint);
-            canvas.drawLine(50, getHeight() / 2 + 180, getWidth() - 50, getHeight() / 2 + 180, decorPaint);
+            canvas.drawLine(50, getHeight() / 2 - 180, getWidth() - 50, getHeight() / 2 - 180, decorPaint);
+            canvas.drawLine(50, getHeight() / 2 + 210, getWidth() - 50, getHeight() / 2 + 210, decorPaint);
+
 
             // Añadir pequeñas estrellas decorativas alrededor
             Paint starDecorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
